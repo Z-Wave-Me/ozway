@@ -40,6 +40,9 @@
 #include "Group.h"
 #include "value_classes/ValueID.h"
 
+#include "ZWayLib.h"
+#include "ZLogging.h"
+
 namespace OpenZWave
 {
 	namespace Internal
@@ -115,6 +118,15 @@ namespace OpenZWave
 			friend class Internal::VC::ValueStore;
 			friend class Internal::Msg;
 
+			//-----------------------------------------------------------------------------
+			// ZWay
+			//-----------------------------------------------------------------------------
+		private:
+			// OZWay begin
+			static void z_switch_binary_watcher(const ZDataRootObject root, ZWDataChangeType type, ZDataHolder data, void *arg);
+			static void z_watcher(const ZWay zway, ZWDeviceChangeType type, ZWBYTE node_id, ZWBYTE instance_id, ZWBYTE command_id, void *arg);
+			ZWLog m_logger;
+			// OZWay end
 		public:
 			typedef void (*pfnOnNotification_t)(Notification const* _pNotification, void* _context);
 
@@ -367,6 +379,7 @@ namespace OpenZWave
 			Driver* GetDriver(uint32 const _homeId); /**< Get a pointer to a Driver object from the HomeID.  Only to be used by OpenZWave. */
 			void SetDriverReady(Driver* _driver, bool success); /**< Indicate that the Driver is ready to be used, and send the notification callback. */
 			list<Driver*> m_pendingDrivers; /**< Drivers that are in the process of reading saved data and querying their Z-Wave network for basic information. */
+			list<Driver*> m_drivers;
 			map<uint32, Driver*> m_readyDrivers; /**< Drivers that are ready to be used by the application. */
 
 		//-----------------------------------------------------------------------------

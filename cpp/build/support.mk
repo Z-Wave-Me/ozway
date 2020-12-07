@@ -146,6 +146,13 @@ instlibdir.x86_64 = /lib64/
 endif
 instlibdir.default   = /lib/
 
+# OZWay begin
+LIBZWAY = $(top_builddir)/libzway
+LDFLAGS += -L$(LIBZWAY)
+CFLAGS += -I$(LIBZWAY)
+LIBS += -lzway -lzcommons -lpthread -lxml2 -lz -lzs2 -lm -lcrypto -larchive
+# OZWay end
+
 #our actual install location for the library
 ifneq ($(instlibdir.$(MACHINE)),)
 instlibdir ?= $(PREFIX)$(instlibdir.$(MACHINE))

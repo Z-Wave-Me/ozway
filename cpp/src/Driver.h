@@ -42,6 +42,21 @@
 #include "platform/TimeStamp.h"
 #include "aes/aescpp.h"
 
+//OZWay
+#include "ZWayLib.h"
+#include "ZLogging.h"
+/*
+typedef struct _SwitchBinaryArg SwitchBinaryArg;
+
+struct		_SwitchBinaryArg
+{
+	uint32	home_id;
+	uint32	node_id;
+	void	*arg;
+};
+*/
+//OZWay
+
 namespace OpenZWave
 {
 	class Notification;
@@ -103,6 +118,16 @@ namespace OpenZWave
 			friend class Internal::Msg;
 			friend class Internal::ManufacturerSpecificDB;
 			friend class TimerThread;
+
+			//-----------------------------------------------------------------------------
+			// ZWay
+			//-----------------------------------------------------------------------------
+			// OZWay begin
+		private:
+			ZWay zway = NULL; //TODO change to m_zway
+			//SwitchBinaryArg args[256];
+			ValueID args[256];
+			// OZWay end
 
 			//-----------------------------------------------------------------------------
 			//	Controller Interfaces
@@ -354,7 +379,6 @@ namespace OpenZWave
 			//	Receiving Z-Wave messages
 			//-----------------------------------------------------------------------------
 		private:
-			bool ReadMsg();
 			void ProcessMsg(uint8* _data, uint8 _length);
 
 			void HandleGetVersionResponse(uint8* _data);
@@ -929,16 +953,11 @@ namespace OpenZWave
 			//	Security Command Class Related (Version 1.1)
 			//-----------------------------------------------------------------------------
 		public:
-			aes_encrypt_ctx *GetAuthKey();
-			aes_encrypt_ctx *GetEncKey();
 			bool isNetworkKeySet();
 
 		private:
-			bool initNetworkKeys(bool newnode);
 			uint8 *GetNetworkKey();
-			bool SendEncryptedMessage();
 			bool SendNonceRequest(string logmsg);
-			void SendNonceKey(uint8 nodeId, uint8 *nonce);
 			aes_encrypt_ctx *AuthKey;
 			aes_encrypt_ctx *EncryptKey;
 			uint8 m_nonceReportSent;
@@ -990,7 +1009,6 @@ namespace OpenZWave
 			bool setHttpClient(Internal::i_HttpClient *client);
 		private:
 			bool startConfigDownload(uint16 _manufacturerId, uint16 _productType, uint16 _productId, string configfile, uint8 node = 0);
-			bool startDownload(string target, string file);
 			bool startMFSDownload(string configfile);
 			bool refreshNodeConfig(uint8 node);
 			void processDownload(Internal::HttpDownload *);

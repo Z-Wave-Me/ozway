@@ -33,6 +33,9 @@
 #include "Defs.h"
 #include "value_classes/ValueID.h"
 
+#include "ZWayLib.h"
+#include "ZLogging.h"
+
 namespace OpenZWave
 {
 	namespace Internal
@@ -87,17 +90,17 @@ namespace OpenZWave
 			 */
 			enum NotificationType
 			{
-				Type_ValueAdded = 0, /**< A new node value has been added to OpenZWave's list. These notifications occur after a node has been discovered, and details of its command classes have been received.  Each command class may generate one or more values depending on the complexity of the item being represented.  */
-				Type_ValueRemoved, /**< A node value has been removed from OpenZWave's list.  This only occurs when a node is removed. */
-				Type_ValueChanged, /**< A node value has been updated from the Z-Wave network and it is different from the previous value. */
-				Type_ValueRefreshed, /**< A node value has been updated from the Z-Wave network. */
+				/*OZWay: + */Type_ValueAdded = 0, /**< A new node value has been added to OpenZWave's list. These notifications occur after a node has been discovered, and details of its command classes have been received.  Each command class may generate one or more values depending on the complexity of the item being represented.  */
+				/*OZWay: + */Type_ValueRemoved, /**< A node value has been removed from OpenZWave's list.  This only occurs when a node is removed. */
+				/*OZWay: + */Type_ValueChanged, /**< A node value has been updated from the Z-Wave network and it is different from the previous value. */
+				/*OZWay: + */Type_ValueRefreshed, /**< A node value has been updated from the Z-Wave network. */
 				Type_Group, /**< The associations for the node have changed. The application should rebuild any group information it holds about the node. */
-				Type_NodeNew, /**< A new node has been found (not already stored in zwcfg*.xml file) */
-				Type_NodeAdded, /**< A new node has been added to OpenZWave's list.  This may be due to a device being added to the Z-Wave network, or because the application is initializing itself. */
-				Type_NodeRemoved, /**< A node has been removed from OpenZWave's list.  This may be due to a device being removed from the Z-Wave network, or because the application is closing. */
-				Type_NodeProtocolInfo, /**< Basic node information has been received, such as whether the node is a listening device, a routing device and its baud rate and basic, generic and specific types. It is after this notification that you can call Manager::GetNodeType to obtain a label containing the device description. */
-				Type_NodeNaming, /**< One of the node names has changed (name, manufacturer, product). */
-				Type_NodeEvent, /**< A node has triggered an event.  This is commonly caused when a node sends a Basic_Set command to the controller.  The event value is stored in the notification. */
+				/*OZWay: + */Type_NodeNew, /**< A new node has been found (not already stored in zwcfg*.xml file) */
+				/*OZWay: + */Type_NodeAdded, /**< A new node has been added to OpenZWave's list.  This may be due to a device being added to the Z-Wave network, or because the application is initializing itself. */
+				/*OZWay: + */Type_NodeRemoved, /**< A node has been removed from OpenZWave's list.  This may be due to a device being removed from the Z-Wave network, or because the application is closing. */
+				/*OZWay: + */Type_NodeProtocolInfo, /**< Basic node information has been received, such as whether the node is a listening device, a routing device and its baud rate and basic, generic and specific types. It is after this notification that you can call Manager::GetNodeType to obtain a label containing the device description. */
+				/*OZWay: + */Type_NodeNaming, /**< One of the node names has changed (name, manufacturer, product). */
+				/*OZWay: + */Type_NodeEvent, /**< A node has triggered an event.  This is commonly caused when a node sends a Basic_Set command to the controller.  The event value is stored in the notification. */
 				Type_PollingDisabled, /**< Polling of a node has been successfully turned off by a call to Manager::DisablePoll */
 				Type_PollingEnabled, /**< Polling of a node has been successfully turned on by a call to Manager::EnablePoll */
 				Type_SceneEvent, /**< Scene Activation Set received (Depreciated in 1.8) */
@@ -368,6 +371,8 @@ namespace OpenZWave
 			}
 
 			NotificationType m_type;
+			// int m_type;
+			// ZWDeviceChangeType m_type;
 			ValueID m_valueId;
 			uint8 m_byte;
 			uint8 m_event;
