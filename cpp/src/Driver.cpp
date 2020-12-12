@@ -133,8 +133,9 @@ Driver::Driver(string const& _controllerPath, ControllerInterface const& _interf
 	// Clear the nodes array
 	memset(m_nodes, 0, sizeof(Node*) * 256);
 
-// 	// Clear the virtual neighbors array
-// 	memset(m_virtualNeighbors, 0, NUM_NODE_BITFIELD_BYTES);
+	TODO(Remove all virtual stuff - may be check to keep it)
+ 	// Clear the virtual neighbors array
+ 	memset(m_virtualNeighbors, 0, NUM_NODE_BITFIELD_BYTES);
 
 // 	// Initialize the Network Keys
 
@@ -174,55 +175,10 @@ Driver::Driver(string const& _controllerPath, ControllerInterface const& _interf
 	zdata_get_integer(zway_find_controller_data(zway, "homeId"), (int *)&m_homeId);
 	zdata_release_lock(ZDataRoot(zway));
 
-	Manager::Get()->SetDriverReady(this, true);
-	ReadCache();
-
 	m_initVersion = 0; // TODO(set this field as _data[2] of SerialAPIInit reply)
 	m_initCaps = 0; // TODO(set this field as _data[3] of SerialAPIInit reply)
-
-	zdata_acquire_lock(ZDataRoot(zway));
-	for (uint8 nodeId = 1; nodeId <= 232; ++nodeId)
-	{
-		if (zway_find_device_data(zway, nodeId, "") != NULL)
-		{
-			if (IsVirtualNode(nodeId))
-			{
-				Log::Write(LogLevel_Info, GetNodeNumber(m_currentMsg), "    Node %.3d - Virtual (ignored)", nodeId);
-			}
-			else
-			{
-				Internal::LockGuard LG(m_nodeMutex);
-				Node* node = GetNode(nodeId);
-				if (node)
-				{
-					Log::Write(LogLevel_Info, GetNodeNumber(m_currentMsg), "    Node %.3d - Known", nodeId);
-					if (!m_init)
-					{
-						// The node was read in from the config, so we
-						// only need to get its current state
-						node->SetQueryStage(Node::QueryStage_CacheLoad);
-					}
-
-				}
-				else
-				{
-					// This node is new
-					Log::Write(LogLevel_Info, GetNodeNumber(m_currentMsg), "    Node %.3d - New", nodeId);
-					Notification* notification = new Notification(Notification::Type_NodeNew);
-					notification->SetHomeAndNodeIds(m_homeId, nodeId);
-					QueueNotification(notification);
-
-					// Create the node and request its info
-					InitNode(nodeId);
-					node = GetNode(nodeId);
-				}
-				m_nodes[nodeId] = node;
-			}
-		}
-	}
-	zdata_release_lock(ZDataRoot(zway));
-
 	//OZWay end
+	
 }
 
 //-----------------------------------------------------------------------------
@@ -376,6 +332,53 @@ void Driver::Start()
 	// m_driverThread->Start(Driver::DriverThreadEntryPoint, this);
 	// m_dnsThread->Start(Internal::DNSThread::DNSThreadEntryPoint, m_dns);
 	// m_timerThread->Start(Internal::TimerThread::TimerThreadEntryPoint, m_timer);
+
+	Manager::Get()->SetDriverReady(this, true);
+	ReadCache();
+
+	//OZWay begin
+	zdata_acquire_lock(ZDataRoot(zway));
+	for (uint8 nodeId = 1; nodeId <= 232; ++nodeId)
+	{
+		if (zway_find_device_data(zway, nodeId, "") != NULL)
+		{
+			if (IsVirtualNode(nodeId))
+			{
+				Log::Write(LogLevel_Info, GetNodeNumber(m_currentMsg), "    Node %.3d - Virtual (ignored)", nodeId);
+			}
+			else
+			{
+				Internal::LockGuard LG(m_nodeMutex);
+				Node* node = GetNode(nodeId);
+				if (node)
+				{
+					Log::Write(LogLevel_Info, GetNodeNumber(m_currentMsg), "    Node %.3d - Known", nodeId);
+					if (!m_init)
+					{
+						// The node was read in from the config, so we
+						// only need to get its current state
+						node->SetQueryStage(Node::QueryStage_CacheLoad);
+					}
+
+				}
+				else
+				{
+					// This node is new
+					Log::Write(LogLevel_Info, GetNodeNumber(m_currentMsg), "    Node %.3d - New", nodeId);
+					Notification* notification = new Notification(Notification::Type_NodeNew);
+					notification->SetHomeAndNodeIds(m_homeId, nodeId);
+					QueueNotification(notification);
+
+					// Create the node and request its info
+					InitNode(nodeId);
+					node = GetNode(nodeId);
+				}
+				m_nodes[nodeId] = node;
+			}
+		}
+	}
+	zdata_release_lock(ZDataRoot(zway));
+	//OZWay end
 }
 
 //-----------------------------------------------------------------------------
@@ -4064,7 +4067,7 @@ void Driver::InitNode(uint8 const _nodeId, bool newNode, bool secure, uint8 cons
 	if (_length == 0)
 	{
 		// Request the node info
-		m_nodes[_nodeId]->SetQueryStage(Node::QueryStage_ProtocolInfo);
+		TODO(Fix in future) // m_nodes[_nodeId]->SetQueryStage(Node::QueryStage_ProtocolInfo);
 	}
 	else
 	{

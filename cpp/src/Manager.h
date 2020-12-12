@@ -377,6 +377,7 @@ namespace OpenZWave
 
 		private:
 			Driver* GetDriver(uint32 const _homeId); /**< Get a pointer to a Driver object from the HomeID.  Only to be used by OpenZWave. */
+			Driver* GetDriver(ZWay zway); /**< Get a pointer to a Driver object from zway object.  Only to be used by OpenZWave. */
 			void SetDriverReady(Driver* _driver, bool success); /**< Indicate that the Driver is ready to be used, and send the notification callback. */
 			list<Driver*> m_pendingDrivers; /**< Drivers that are in the process of reading saved data and querying their Z-Wave network for basic information. */
 			list<Driver*> m_drivers;

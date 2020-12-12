@@ -405,10 +405,6 @@ namespace OpenZWave
 								/* check if the file exists */
 								if (iter == m_downloading.end())
 								{
-									if (driver->startDownload(imagefile, metaDataItem->GetText())) {
-										Log::Write(LogLevel_Info, "Missing Picture %s - Starting Download", imagefile.c_str());
-										m_downloading.push_back(imagefile);
-									}
 								}
 							}
 						}

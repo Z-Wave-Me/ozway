@@ -137,6 +137,8 @@ void Manager::z_switch_binary_watcher(const ZDataRootObject root, ZWDataChangeTy
 
 void Manager::z_watcher(const ZWay zway, ZWDeviceChangeType type, ZWBYTE node_id, ZWBYTE instance_id, ZWBYTE command_id, void *arg)
 {
+	Driver* driver = (Driver *)arg;
+	
 //	Manager::Get()->m_notificationMutex->Lock();
 	Notification *notification;
 	uint32 home_id;
@@ -175,11 +177,31 @@ void Manager::z_watcher(const ZWay zway, ZWDeviceChangeType type, ZWBYTE node_id
 		}
 		case CommandAdded:
 		{
+			Internal::LockGuard LG(driver->m_nodeMutex);
+			
+			Node* node = driver->GetNode(node_id);
+			
 			switch (command_id)
 			{
 //ZWEXPORT ZWError zdata_add_callback(ZDataHolder data, ZDataChangeCallback callback, ZWBOOL watch_children, void *arg);
 				case 0x25:
 				{
+					Internal::CC::CommandClass* cc = node->GetCommandClass(command_id);
+					
+					if (cc) break; // CC already exists on this device
+					
+					cc = node->AddCommandClass(command_id);
+					if (!cc)
+					{
+						Log::Write(LogLevel_Error, "Can not create command class %d on device %d", command_id, node_id, instance_id);
+						break;
+					}
+					
+                                        cc->CreateVars();
+                                        
+                                        /* Dont' do this for Controller Nodes */
+                                        if (driver->GetControllerNodeId() == node_id) break;
+
 					notification = new Notification(Notification::Type_ValueAdded);
 //ValueID(uint32 const _homeId, uint8 const _nodeId, ValueGenre const _genre, uint8 const _commandClassId, uint8 const _instance, uint16 const _valueIndex, ValueType const _type) :
 					notification->SetValueId(ValueID(home_id, node_id, ValueID::ValueGenre_User, command_id, instance_id, ValueID_Index_SwitchBinary::Level, ValueID::ValueType_Bool)); //TODO fix genre & valueType
@@ -476,13 +498,15 @@ bool Manager::AddDriver(string const& _controllerPath, Driver::ControllerInterfa
 	// }
 
 	Driver* driver = new Driver(_controllerPath, _interface);
-	// m_pendingDrivers.push_back(driver);
+	m_pendingDrivers.push_back(driver);
 	m_drivers.push_back(driver);
-	// driver->Start();
+	driver->Start();
+	
 	// if (!driver->Start(_controllerPath))
 	// 	return false;
+	
 	// OZWay begin
-	zway_device_add_callback(driver->zway, DeviceAdded | DeviceRemoved | InstanceAdded | InstanceRemoved | CommandAdded | CommandRemoved | EnumerateExisting, /*SumClass::*/z_watcher, NULL);
+	zway_device_add_callback(driver->zway, DeviceAdded | DeviceRemoved | InstanceAdded | InstanceRemoved | CommandAdded | CommandRemoved | EnumerateExisting, /*SumClass::*/z_watcher, driver);
 	// OZWay end
 	Log::Write(LogLevel_Info, "mgr,     Added driver for controller %s", _controllerPath.c_str());
 	return true;
@@ -552,6 +576,14 @@ Driver* Manager::GetDriver(uint32 const _homeId)
 	OZW_ERROR(OZWException::OZWEXCEPTION_INVALID_HOMEID, "Invalid HomeId passed to GetDriver");
 	//assert(0); << Don't assert as this might be a valid condition when we call RemoveDriver. See comments above.
 	return NULL;
+}
+
+Driver* Manager::GetDriver(ZWay zway)
+{
+	int home_id;
+	TODO(add LOG_ERR)
+	zdata_get_integer(zway_find_controller_data(zway, "homeId"), &home_id);
+	return GetDriver(home_id);
 }
 
 //-----------------------------------------------------------------------------

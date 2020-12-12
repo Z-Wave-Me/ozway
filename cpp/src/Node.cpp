@@ -112,6 +112,7 @@ Node::Node(uint32 const _homeId, uint8 const _nodeId) :
 	memset(m_rssi_4, 0, sizeof(m_rssi_4));
 	memset(m_rssi_5, 0, sizeof(m_rssi_5));
 
+	TODO(remove this)
 	AddCommandClass(Internal::CC::NoOperation::StaticGetCommandClassId());
 	AddCommandClass(Internal::CC::ManufacturerSpecific::StaticGetCommandClassId());
 }
@@ -199,6 +200,9 @@ void Node::AdvanceQueries()
 			}
 			case QueryStage_ProtocolInfo:
 			{
+				TODO(remove this dirty hack to let it boot - fix in future)
+				m_queryPending = true;
+				
 				// determines, among other things, whether this node is a listener, its maximum baud rate and its device classes
 				if (!ProtocolInfoReceived())
 				{
