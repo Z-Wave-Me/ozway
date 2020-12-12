@@ -38,6 +38,7 @@
 #include "Msg.h"
 #include "platform/TimeStamp.h"
 #include "Group.h"
+#include "LogCall.h"
 
 class TiXmlElement;
 class TiXmlNode;

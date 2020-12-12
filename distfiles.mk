@@ -1505,6 +1505,8 @@ DISTFILES =	.gitignore \
 	cpp/src/Msg.h \
 	cpp/src/Node.cpp \
 	cpp/src/Node.h \
+	cpp/src/LogCall.cpp\
+	cpp/src/LogCall.h\
 	cpp/src/Notification.cpp \
 	cpp/src/Notification.h \
 	cpp/src/NotificationCCTypes.cpp \

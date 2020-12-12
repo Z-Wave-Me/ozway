@@ -123,6 +123,7 @@ Node::Node(uint32 const _homeId, uint8 const _nodeId) :
 //-----------------------------------------------------------------------------
 Node::~Node()
 {
+	LOG_CALL
 	// Remove any messages from queues
 	GetDriver()->RemoveQueues(m_nodeId);
 
@@ -172,6 +173,7 @@ Node::~Node()
 //-----------------------------------------------------------------------------
 void Node::AdvanceQueries()
 {
+	LOG_CALL
 	// For OpenZWave to discover everything about a node, we have to follow a certain
 	// order of queries, because the results of one stage may affect what is requested
 	// in the next stage.  The stage is saved with the node data, so that any incomplete
@@ -698,6 +700,7 @@ void Node::AdvanceQueries()
 //-----------------------------------------------------------------------------
 void Node::QueryStageComplete(QueryStage const _stage)
 {
+	LOG_CALL
 	// Check that we are actually on the specified stage
 	if (_stage != m_queryStage)
 	{
@@ -724,6 +727,7 @@ void Node::QueryStageComplete(QueryStage const _stage)
 void Node::QueryStageRetry(QueryStage const _stage, uint8 const _maxAttempts // = 0
 		)
 {
+	LOG_CALL
 	Log::Write(LogLevel_Info, m_nodeId, "QueryStageRetry stage %s requested stage %s max %d retries %d pending %d", c_queryStageNames[_stage], c_queryStageNames[m_queryStage], _maxAttempts, m_queryRetries, m_queryPending);
 
 	// Check that we are actually on the specified stage
@@ -754,6 +758,7 @@ void Node::QueryStageRetry(QueryStage const _stage, uint8 const _maxAttempts // 
 void Node::SetQueryStage(QueryStage const _stage, bool const _advance	// = true
 		)
 {
+	LOG_CALL
 	if ((int) _stage < (int) m_queryStage)
 	{
 		m_queryStage = _stage;
@@ -776,6 +781,7 @@ void Node::SetQueryStage(QueryStage const _stage, bool const _advance	// = true
 //-----------------------------------------------------------------------------
 string Node::GetQueryStageName(QueryStage const _stage)
 {
+	LOG_CALL
 	return c_queryStageNames[_stage];
 }
 
@@ -785,6 +791,7 @@ string Node::GetQueryStageName(QueryStage const _stage)
 //-----------------------------------------------------------------------------
 uint32 Node::GetNeighbors(uint8** o_neighbors)
 {
+	LOG_CALL
 	// determine how many neighbors there are
 	int i;
 	uint32 numNeighbors = 0;
@@ -829,6 +836,7 @@ uint32 Node::GetNeighbors(uint8** o_neighbors)
 //-----------------------------------------------------------------------------
 void Node::ReadXML(TiXmlElement const* _node)
 {
+	LOG_CALL
 	char const* str;
 	int intVal;
 
@@ -1116,6 +1124,7 @@ void Node::ReadXML(TiXmlElement const* _node)
 //-----------------------------------------------------------------------------
 void Node::ReadDeviceProtocolXML(TiXmlElement const* _ccsElement)
 {
+	LOG_CALL
 	char const *str = _ccsElement->Attribute("Revision");
 	if (str)
 	{
@@ -1181,6 +1190,7 @@ void Node::ReadDeviceProtocolXML(TiXmlElement const* _ccsElement)
 //-----------------------------------------------------------------------------
 void Node::ReadCommandClassesXML(TiXmlElement const* _ccsElement)
 {
+	LOG_CALL
 	char const* str;
 	int32 intVal;
 
@@ -1241,6 +1251,7 @@ void Node::ReadCommandClassesXML(TiXmlElement const* _ccsElement)
 //-----------------------------------------------------------------------------
 void Node::WriteXML(TiXmlElement* _driverElement)
 {
+	LOG_CALL
 	if (m_queryStage <= QueryStage_CacheLoad)
 	{
 		/* Just return our cached copy of the "Cache" as nothing new should be here */
@@ -1391,6 +1402,7 @@ void Node::WriteXML(TiXmlElement* _driverElement)
 //-----------------------------------------------------------------------------
 void Node::UpdateProtocolInfo(uint8 const* _data)
 {
+	LOG_CALL
 	if (ProtocolInfoReceived())
 	{
 		// We already have this info
@@ -1529,6 +1541,7 @@ void Node::UpdateProtocolInfo(uint8 const* _data)
 
 void Node::SetProtocolInfo(uint8 const* _protocolInfo, uint8 const _length)
 {
+	LOG_CALL
 
 	if (ProtocolInfoReceived() || m_basicprotocolInfoReceived == true)
 	{
@@ -1599,16 +1612,19 @@ void Node::SetProtocolInfo(uint8 const* _protocolInfo, uint8 const _length)
 
 void Node::SetSecured(bool secure)
 {
+	LOG_CALL
 	m_secured = secure;
 }
 
 bool Node::IsSecured()
 {
+	LOG_CALL
 	return m_secured;
 }
 
 void Node::SetInstanceLabel(uint8 const _instance, char *label)
 {
+	LOG_CALL
 	m_globalInstanceLabel[_instance] = string(label);
 	Driver *driver = GetDriver();
 	if (driver)
@@ -1617,6 +1633,7 @@ void Node::SetInstanceLabel(uint8 const _instance, char *label)
 
 string Node::GetInstanceLabel(uint8 const _ccid, uint8 const _instance)
 {
+	LOG_CALL
 	string label;
 	/* find the CommandClass */
 	Internal::CC::CommandClass *_cc = GetCommandClass(_ccid);
@@ -1640,6 +1657,7 @@ string Node::GetInstanceLabel(uint8 const _ccid, uint8 const _instance)
 
 uint8 Node::GetNumInstances(uint8 const _ccid)
 {
+	LOG_CALL
 	uint8 ccid = _ccid;
 	int instances = 1;
 	if (_ccid == 0)
@@ -1656,6 +1674,7 @@ uint8 Node::GetNumInstances(uint8 const _ccid)
 
 string Node::GetBasicString() 
 {
+	LOG_CALL
 	char str[32];
 	string label;
 	uint8 _basic = GetBasic();
@@ -1676,6 +1695,7 @@ string Node::GetBasicString()
 
 uint8 Node::GetGeneric(uint8 const _instance) const
 {
+	LOG_CALL
 	if (_instance > 0) {
 		if (Internal::CC::MultiInstance *cc = static_cast<Internal::CC::MultiInstance *>(GetCommandClass(Internal::CC::MultiInstance::StaticGetCommandClassId()))) 
 		{
@@ -1686,6 +1706,7 @@ uint8 Node::GetGeneric(uint8 const _instance) const
 }
 string Node::GetGenericString(uint8 const _instance)
 {
+	LOG_CALL
 	char str[32];
 	string label;
 	uint8 _generic = GetGeneric(_instance);
@@ -1711,6 +1732,7 @@ string Node::GetGenericString(uint8 const _instance)
 
 uint8 Node::GetSpecific(uint8 const _instance) const
 {
+	LOG_CALL
 	if (_instance > 0) {
 		if (Internal::CC::MultiInstance *cc = static_cast<Internal::CC::MultiInstance *>(GetCommandClass(Internal::CC::MultiInstance::StaticGetCommandClassId())))
 		{

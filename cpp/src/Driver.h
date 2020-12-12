@@ -41,6 +41,7 @@
 #include "platform/Thread.h"
 #include "platform/TimeStamp.h"
 #include "aes/aescpp.h"
+#include "LogCall.h"
 
 //OZWay
 #include "ZWayLib.h"

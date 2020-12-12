@@ -42,6 +42,7 @@
 
 #include "ZWayLib.h"
 #include "ZLogging.h"
+#include "LogCall.h"
 
 namespace OpenZWave
 {

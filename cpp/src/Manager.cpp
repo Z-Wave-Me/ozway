@@ -88,6 +88,7 @@ extern char ozw_version_string[];
 
 void Manager::z_switch_binary_watcher(const ZDataRootObject root, ZWDataChangeType type, ZDataHolder data, void *arg)
 {
+	LOG_CALL
 	Notification *notification;
 //	SwitchBinaryArg swBinArg = *(SwitchBinaryArg *)arg;
 	ValueID valueId = *(ValueID *)arg;
@@ -137,6 +138,9 @@ void Manager::z_switch_binary_watcher(const ZDataRootObject root, ZWDataChangeTy
 
 void Manager::z_watcher(const ZWay zway, ZWDeviceChangeType type, ZWBYTE node_id, ZWBYTE instance_id, ZWBYTE command_id, void *arg)
 {
+	LOG_CALL
+	printf("T %i, N %i:%i:%i\n", type, node_id, instance_id, command_id);
+	
 	Driver* driver = (Driver *)arg;
 	
 //	Manager::Get()->m_notificationMutex->Lock();
@@ -236,6 +240,7 @@ void Manager::z_watcher(const ZWay zway, ZWDeviceChangeType type, ZWBYTE node_id
 //-----------------------------------------------------------------------------
 Manager* Manager::Create()
 {
+	LOG_CALL
 	if (Options::Get() && Options::Get()->AreLocked())
 	{
 		if ( NULL == s_instance)
@@ -262,6 +267,7 @@ Manager* Manager::Create()
 //-----------------------------------------------------------------------------
 void Manager::Destroy()
 {
+	LOG_CALL
 	delete s_instance;
 	s_instance = NULL;
 }
@@ -272,6 +278,7 @@ void Manager::Destroy()
 //-----------------------------------------------------------------------------
 std::string Manager::getVersionAsString()
 {
+	LOG_CALL
 	std::ostringstream versionstream;
 	versionstream << ozw_vers_major << "." << ozw_vers_minor << "." << ozw_vers_revision;
 	return versionstream.str();
@@ -282,6 +289,7 @@ std::string Manager::getVersionAsString()
 //-----------------------------------------------------------------------------
 std::string Manager::getVersionLongAsString()
 {
+	LOG_CALL
 	std::ostringstream versionstream;
 	versionstream << ozw_version_string;
 	return versionstream.str();
@@ -292,6 +300,7 @@ std::string Manager::getVersionLongAsString()
 //-----------------------------------------------------------------------------
 ozwversion Manager::getVersion()
 {
+	LOG_CALL
 	return version(ozw_vers_major, ozw_vers_minor);
 }
 
@@ -302,6 +311,7 @@ ozwversion Manager::getVersion()
 Manager::Manager() :
 		m_notificationMutex(new Internal::Platform::Mutex())
 {
+	LOG_CALL
 	// Ensure the singleton instance is set
 	s_instance = this;
 
@@ -367,6 +377,7 @@ Manager::Manager() :
 //-----------------------------------------------------------------------------
 Manager::~Manager()
 {
+	LOG_CALL
 	// Clear the pending list
 	while (!m_pendingDrivers.empty())
 	{
@@ -451,6 +462,7 @@ Manager::~Manager()
 //-----------------------------------------------------------------------------
 void Manager::WriteConfig(uint32 const _homeId)
 {
+	LOG_CALL
 	if (Driver* driver = GetDriver(_homeId))
 	{
 		driver->WriteCache();
@@ -473,6 +485,7 @@ void Manager::WriteConfig(uint32 const _homeId)
 //-----------------------------------------------------------------------------
 bool Manager::AddDriver(string const& _controllerPath, Driver::ControllerInterface const& _interface)
 {
+	LOG_CALL
 	// Make sure we don't already have a driver for this controller
 
 	// Search the driver list
@@ -518,6 +531,7 @@ bool Manager::AddDriver(string const& _controllerPath, Driver::ControllerInterfa
 //-----------------------------------------------------------------------------
 bool Manager::RemoveDriver(string const& _controllerPath)
 {
+	LOG_CALL
 	// Search the pending list
 	for (list<Driver*>::iterator pit = m_pendingDrivers.begin(); pit != m_pendingDrivers.end(); ++pit)
 	{
@@ -566,6 +580,7 @@ bool Manager::RemoveDriver(string const& _controllerPath)
 //-----------------------------------------------------------------------------
 Driver* Manager::GetDriver(uint32 const _homeId)
 {
+	LOG_CALL
 	map<uint32, Driver*>::iterator it = m_readyDrivers.find(_homeId);
 	if (it != m_readyDrivers.end())
 	{
@@ -580,6 +595,8 @@ Driver* Manager::GetDriver(uint32 const _homeId)
 
 Driver* Manager::GetDriver(ZWay zway)
 {
+	LOG_CALL
+	
 	int home_id;
 	TODO(add LOG_ERR)
 	zdata_get_integer(zway_find_controller_data(zway, "homeId"), &home_id);
@@ -592,6 +609,7 @@ Driver* Manager::GetDriver(ZWay zway)
 //-----------------------------------------------------------------------------
 void Manager::SetDriverReady(Driver* _driver, bool success)
 {
+	LOG_CALL
 	// Search the pending list
 	bool found = false;
 	for (list<Driver*>::iterator it = m_pendingDrivers.begin(); it != m_pendingDrivers.end(); ++it)
@@ -632,6 +650,7 @@ void Manager::SetDriverReady(Driver* _driver, bool success)
 //-----------------------------------------------------------------------------
 uint8 Manager::GetControllerNodeId(uint32 const _homeId)
 {
+	LOG_CALL
 	if (Driver* driver = GetDriver(_homeId))
 	{
 		return driver->GetControllerNodeId();
@@ -647,6 +666,7 @@ uint8 Manager::GetControllerNodeId(uint32 const _homeId)
 //-----------------------------------------------------------------------------
 uint8 Manager::GetSUCNodeId(uint32 const _homeId)
 {
+	LOG_CALL
 	if (Driver* driver = GetDriver(_homeId))
 	{
 		return driver->GetSUCNodeId();
@@ -662,6 +682,7 @@ uint8 Manager::GetSUCNodeId(uint32 const _homeId)
 //-----------------------------------------------------------------------------
 bool Manager::IsPrimaryController(uint32 const _homeId)
 {
+	LOG_CALL
 	if (Driver* driver = GetDriver(_homeId))
 	{
 		return driver->IsPrimaryController();
@@ -677,6 +698,7 @@ bool Manager::IsPrimaryController(uint32 const _homeId)
 //-----------------------------------------------------------------------------
 bool Manager::IsStaticUpdateController(uint32 const _homeId)
 {
+	LOG_CALL
 	if (Driver* driver = GetDriver(_homeId))
 	{
 		return driver->IsStaticUpdateController();
@@ -692,6 +714,7 @@ bool Manager::IsStaticUpdateController(uint32 const _homeId)
 //-----------------------------------------------------------------------------
 bool Manager::IsBridgeController(uint32 const _homeId)
 {
+	LOG_CALL
 	if (Driver* driver = GetDriver(_homeId))
 	{
 		return driver->IsBridgeController();
@@ -707,6 +730,7 @@ bool Manager::IsBridgeController(uint32 const _homeId)
 //-----------------------------------------------------------------------------
 bool Manager::HasExtendedTxStatus(uint32 const _homeId)
 {
+	LOG_CALL
 	if (Driver* driver = GetDriver(_homeId))
 	{
 		return driver->HasExtendedTxStatus();
@@ -722,6 +746,7 @@ bool Manager::HasExtendedTxStatus(uint32 const _homeId)
 //-----------------------------------------------------------------------------
 string Manager::GetLibraryVersion(uint32 const _homeId)
 {
+	LOG_CALL
 	if (Driver* driver = GetDriver(_homeId))
 	{
 		return driver->GetLibraryVersion();
@@ -737,6 +762,7 @@ string Manager::GetLibraryVersion(uint32 const _homeId)
 //-----------------------------------------------------------------------------
 string Manager::GetLibraryTypeName(uint32 const _homeId)
 {
+	LOG_CALL
 	if (Driver* driver = GetDriver(_homeId))
 	{
 		return driver->GetLibraryTypeName();
@@ -752,6 +778,7 @@ string Manager::GetLibraryTypeName(uint32 const _homeId)
 //-----------------------------------------------------------------------------
 int32 Manager::GetSendQueueCount(uint32 const _homeId)
 {
+	LOG_CALL
 	if (Driver* driver = GetDriver(_homeId))
 	{
 		return driver->GetSendQueueCount();
@@ -767,6 +794,7 @@ int32 Manager::GetSendQueueCount(uint32 const _homeId)
 //-----------------------------------------------------------------------------
 void Manager::LogDriverStatistics(uint32 const _homeId)
 {
+	LOG_CALL
 	if (Driver* driver = GetDriver(_homeId))
 	{
 		return driver->LogDriverStatistics();
@@ -781,6 +809,7 @@ void Manager::LogDriverStatistics(uint32 const _homeId)
 //-----------------------------------------------------------------------------
 Driver::ControllerInterface Manager::GetControllerInterfaceType(uint32 const _homeId)
 {
+	LOG_CALL
 	Driver::ControllerInterface ifType = Driver::ControllerInterface_Unknown;
 	if (Driver* driver = GetDriver(_homeId))
 	{
@@ -795,6 +824,7 @@ Driver::ControllerInterface Manager::GetControllerInterfaceType(uint32 const _ho
 //-----------------------------------------------------------------------------
 string Manager::GetControllerPath(uint32 const _homeId)
 {
+	LOG_CALL
 	string path = "";
 	if (Driver* driver = GetDriver(_homeId))
 	{
@@ -812,6 +842,7 @@ string Manager::GetControllerPath(uint32 const _homeId)
 //-----------------------------------------------------------------------------
 int32 Manager::GetPollInterval()
 {
+	LOG_CALL
 	for (map<uint32, Driver*>::iterator rit = m_readyDrivers.begin(); rit != m_readyDrivers.end(); ++rit)
 	{
 		return rit->second->GetPollInterval();
@@ -830,6 +861,7 @@ int32 Manager::GetPollInterval()
 //-----------------------------------------------------------------------------
 void Manager::SetPollInterval(int32 _milliseconds, bool _bIntervalBetweenPolls)
 {
+	LOG_CALL
 	for (list<Driver*>::iterator pit = m_pendingDrivers.begin(); pit != m_pendingDrivers.end(); ++pit)
 	{
 		(*pit)->SetPollInterval(_milliseconds, _bIntervalBetweenPolls);
@@ -847,6 +879,7 @@ void Manager::SetPollInterval(int32 _milliseconds, bool _bIntervalBetweenPolls)
 //-----------------------------------------------------------------------------
 bool Manager::EnablePoll(ValueID const &_valueId, uint8 const _intensity)
 {
+	LOG_CALL
 	if (Driver* driver = GetDriver(_valueId.GetHomeId()))
 	{
 		return (driver->EnablePoll(_valueId, _intensity));
@@ -862,6 +895,7 @@ bool Manager::EnablePoll(ValueID const &_valueId, uint8 const _intensity)
 //-----------------------------------------------------------------------------
 bool Manager::DisablePoll(ValueID const &_valueId)
 {
+	LOG_CALL
 	if (Driver* driver = GetDriver(_valueId.GetHomeId()))
 	{
 		return (driver->DisablePoll(_valueId));
@@ -877,6 +911,7 @@ bool Manager::DisablePoll(ValueID const &_valueId)
 //-----------------------------------------------------------------------------
 bool Manager::isPolled(ValueID const &_valueId)
 {
+	LOG_CALL
 	if (Driver* driver = GetDriver(_valueId.GetHomeId()))
 	{
 		return (driver->isPolled(_valueId));
@@ -892,6 +927,7 @@ bool Manager::isPolled(ValueID const &_valueId)
 //-----------------------------------------------------------------------------
 void Manager::SetPollIntensity(ValueID const &_valueId, uint8 const _intensity)
 {
+	LOG_CALL
 	if (Driver* driver = GetDriver(_valueId.GetHomeId()))
 	{
 		return (driver->SetPollIntensity(_valueId, _intensity));
@@ -906,6 +942,7 @@ void Manager::SetPollIntensity(ValueID const &_valueId, uint8 const _intensity)
 //-----------------------------------------------------------------------------
 uint8 Manager::GetPollIntensity(ValueID const &_valueId)
 {
+	LOG_CALL
 	uint8 intensity = 0;
 	if (Driver* driver = GetDriver(_valueId.GetHomeId()))
 	{
@@ -934,6 +971,7 @@ uint8 Manager::GetPollIntensity(ValueID const &_valueId)
 //-----------------------------------------------------------------------------
 bool Manager::RefreshNodeInfo(uint32 const _homeId, uint8 const _nodeId)
 {
+	LOG_CALL
 	if (Driver* driver = GetDriver(_homeId))
 	{
 		// Cause the node's data to be obtained from the Z-Wave network
@@ -952,6 +990,7 @@ bool Manager::RefreshNodeInfo(uint32 const _homeId, uint8 const _nodeId)
 //-----------------------------------------------------------------------------
 bool Manager::RequestNodeState(uint32 const _homeId, uint8 const _nodeId)
 {
+	LOG_CALL
 	if (Driver* driver = GetDriver(_homeId))
 	{
 		Internal::LockGuard LG(driver->m_nodeMutex);
