@@ -4029,6 +4029,26 @@ void Manager::SoftReset(uint32 const _homeId)
 }
 
 //-----------------------------------------------------------------------------
+// <Manager::BeginControllerCommand>
+// Start the controller performing one of its network management functions
+//-----------------------------------------------------------------------------
+bool Manager::BeginControllerCommand(uint32 const _homeId, Driver::ControllerCommand _command, Driver::pfnControllerCallback_t _callback,				// = NULL
+		void* _context,								// = NULL
+		bool _highPower,							// = false
+		uint8 _nodeId,								// = 0xff
+		uint8 _arg								// = 0
+		)
+{
+	if (Driver* driver = GetDriver(_homeId))
+	{
+		(void)driver; FINISH_ME
+		return false;
+	}
+
+	return false;
+}
+
+//-----------------------------------------------------------------------------
 // <Manager::CancelControllerCommand>
 // Stop the current controller function
 //-----------------------------------------------------------------------------
