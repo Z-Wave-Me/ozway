@@ -64,18 +64,6 @@
 #include "value_classes/ValueString.h"
 #include "value_classes/ValueBitSet.h"
 
-// OZWay
-#include "Driver.h"
-
-#include "ZWayLib.h"
-#include "ZLogging.h"
-#include "ZDataExt.h"
-
-//TODO move defines to header, handle all zway functions' errors
-#define _NOT_YET_IMPLEMENTED_ printf("The method \"%s\" is not yet implemented, in %s, line %d\n", __func__,  __FILE__, __LINE__);
-//#define _NOT_YET_IMPLEMENTED_(zway) zway_log((zway), Error, "The method \"%s\" is not yet implemented, in %s, line %d\n", __func__,  __FILE__, __LINE__)
-#define _NOT_SUPPORTED_(zway) zway_log((zway), Error, "The method \"%s\" is not supported, in %s, line %d\n", __func__,  __FILE__, __LINE__)
-// OZWay
 using namespace OpenZWave;
 
 Manager* Manager::s_instance = NULL;
@@ -163,6 +151,14 @@ void Manager::z_watcher(const ZWay zway, ZWDeviceChangeType type, ZWBYTE node_id
 		}
 		case DeviceRemoved:
 		{
+			TODO(это нужно перенести в Driver.cpp или вообще удалить m_nodes)
+			/*
+			{
+				Internal::LockGuard LG(m_nodeMutex);
+				delete m_nodes[m_currentControllerCommand->m_controllerCommandNode];
+				m_nodes[m_currentControllerCommand->m_controllerCommandNode] = NULL;
+			}
+			*/
 			notification = new Notification(Notification::Type_NodeRemoved);
 			notification->SetHomeAndNodeIds(home_id, node_id);
 			for (list<Watcher*>::iterator it = Manager::Get()->m_watchers.begin(); it != Manager::Get()->m_watchers.end(); ++it)
@@ -598,8 +594,7 @@ Driver* Manager::GetDriver(ZWay zway)
 	LOG_CALL
 	
 	int home_id;
-	TODO(add LOG_ERR)
-	zdata_get_integer(zway_find_controller_data(zway, "homeId"), &home_id);
+	LOG_ERR(zdata_get_integer(zway_find_controller_data(zway, "homeId"), &home_id));
 	return GetDriver(home_id);
 }
 
@@ -781,7 +776,9 @@ int32 Manager::GetSendQueueCount(uint32 const _homeId)
 	LOG_CALL
 	if (Driver* driver = GetDriver(_homeId))
 	{
-		return driver->GetSendQueueCount();
+		TODO(get from Z-Way controller.data.queueCount)
+		(void)driver->zway;
+		return 0;
 	}
 
 	Log::Write(LogLevel_Info, "mgr,     GetSendQueueCount() failed - _homeId %d not found", _homeId);
@@ -4026,27 +4023,9 @@ void Manager::SoftReset(uint32 const _homeId)
 {
 	if (Driver* driver = GetDriver(_homeId))
 	{
-		driver->SoftReset();
+		ZWay zway = driver->zway;
+		LOG_ERR(zway_fc_serial_api_soft_reset(zway, NULL, NULL, NULL));
 	}
-}
-
-//-----------------------------------------------------------------------------
-// <Manager::BeginControllerCommand>
-// Start the controller performing one of its network management functions
-//-----------------------------------------------------------------------------
-bool Manager::BeginControllerCommand(uint32 const _homeId, Driver::ControllerCommand _command, Driver::pfnControllerCallback_t _callback,				// = NULL
-		void* _context,								// = NULL
-		bool _highPower,							// = false
-		uint8 _nodeId,								// = 0xff
-		uint8 _arg								// = 0
-		)
-{
-	if (Driver* driver = GetDriver(_homeId))
-	{
-		return driver->BeginControllerCommand(_command, _callback, _context, _highPower, _nodeId, _arg);
-	}
-
-	return false;
 }
 
 //-----------------------------------------------------------------------------
@@ -4057,7 +4036,8 @@ bool Manager::CancelControllerCommand(uint32 const _homeId)
 {
 	if (Driver* driver = GetDriver(_homeId))
 	{
-		return (driver->CancelControllerCommand());
+		(void)driver; TODO(driver->CancelControllerCommand())
+		return 0;
 	}
 
 	return false;
@@ -4095,6 +4075,7 @@ void Manager::HealNetworkNode(uint32 const _homeId, uint8 const _nodeId, bool _d
 {
 	if (Driver* driver = GetDriver(_homeId))
 	{
+		(void)driver; FINISH_ME /*
 		Internal::LockGuard LG(driver->m_nodeMutex);
 		Node* node = driver->GetNode(_nodeId);
 		if (node)
@@ -4105,6 +4086,7 @@ void Manager::HealNetworkNode(uint32 const _homeId, uint8 const _nodeId, bool _d
 				driver->UpdateNodeRoutes(_nodeId, true);
 			}
 		}
+		*/
 	}
 }
 
@@ -4121,11 +4103,13 @@ void Manager::HealNetwork(uint32 const _homeId, bool _doRR)
 		{
 			if (driver->m_nodes[i] != NULL)
 			{
+				(void)driver; FINISH_ME /*
 				driver->BeginControllerCommand(Driver::ControllerCommand_RequestNodeNeighborUpdate, NULL, NULL, true, i, 0);
 				if (_doRR)
 				{
 					driver->UpdateNodeRoutes(i, true);
 				}
+				*/
 			}
 		}
 	}
@@ -4138,10 +4122,14 @@ bool Manager::AddNode(uint32 const _homeId, bool _doSecurity)
 {
 	if (Driver *driver = GetDriver(_homeId))
 	{
-		Internal::LockGuard LG(driver->m_nodeMutex);
-		/* we use the Args option to communicate if Security CC should be initialized */
-		return driver->BeginControllerCommand(Driver::ControllerCommand_AddDevice,
-		NULL, NULL, true, 0, (_doSecurity == true ? 1 : 0));
+		ZWay zway = driver->zway;
+		
+		zdata_acquire_lock(ZDataRoot(zway));
+		LOG_ERR(zdata_set_boolean(zway_find_controller_data(zway, "secureInclusion"), _doSecurity));
+		zdata_release_lock(ZDataRoot(zway));
+		
+		LOG_ERR(zway_controller_add_node_to_network(zway, true));
+		TODO(callback on inclusion success/failure)
 	}
 	return false;
 }
@@ -4154,9 +4142,9 @@ bool Manager::RemoveNode(uint32 const _homeId)
 {
 	if (Driver *driver = GetDriver(_homeId))
 	{
-		Internal::LockGuard LG(driver->m_nodeMutex);
-		return driver->BeginControllerCommand(Driver::ControllerCommand_RemoveDevice,
-		NULL, NULL, true, 0, 0);
+		ZWay zway = driver->zway;
+		LOG_ERR(zway_controller_remove_node_from_network(zway, true));
+		TODO(callback on inclusion success/failure)
 	}
 	return false;
 }
@@ -4169,9 +4157,9 @@ bool Manager::RemoveFailedNode(uint32 const _homeId, uint8 const _nodeId)
 {
 	if (Driver *driver = GetDriver(_homeId))
 	{
-		Internal::LockGuard LG(driver->m_nodeMutex);
-		return driver->BeginControllerCommand(Driver::ControllerCommand_RemoveFailedNode,
-		NULL, NULL, true, _nodeId, 0);
+		ZWay zway = driver->zway;
+		LOG_ERR(zway_fc_remove_failed_node(zway, _nodeId, NULL, NULL, NULL));
+		TODO(callback on inclusion success/failure)
 	}
 	return false;
 }
@@ -4182,13 +4170,15 @@ bool Manager::RemoveFailedNode(uint32 const _homeId, uint8 const _nodeId)
 //-----------------------------------------------------------------------------
 bool Manager::HasNodeFailed(uint32 const _homeId, uint8 const _nodeId)
 {
+	ZWBOOL failed = false;
 	if (Driver *driver = GetDriver(_homeId))
 	{
-		Internal::LockGuard LG(driver->m_nodeMutex);
-		return driver->BeginControllerCommand(Driver::ControllerCommand_HasNodeFailed,
-		NULL, NULL, true, _nodeId, 0);
+		ZWay zway = driver->zway;
+		zdata_acquire_lock(ZDataRoot(zway));
+		LOG_ERR(zdata_get_boolean(zway_find_device_data(zway, _nodeId, "isFailed"), &failed));
+		zdata_release_lock(ZDataRoot(zway));
 	}
-	return false;
+	return (bool)failed;
 }
 
 //-----------------------------------------------------------------------------
@@ -4199,9 +4189,11 @@ bool Manager::AssignReturnRoute(uint32 const _homeId, uint8 const _nodeId)
 {
 	if (Driver *driver = GetDriver(_homeId))
 	{
+		(void)driver; FINISH_ME /*
 		Internal::LockGuard LG(driver->m_nodeMutex);
 		return driver->BeginControllerCommand(Driver::ControllerCommand_AssignReturnRoute,
 		NULL, NULL, true, _nodeId, 0);
+		*/
 	}
 	return false;
 }
@@ -4214,9 +4206,10 @@ bool Manager::RequestNodeNeighborUpdate(uint32 const _homeId, uint8 const _nodeI
 {
 	if (Driver *driver = GetDriver(_homeId))
 	{
-		Internal::LockGuard LG(driver->m_nodeMutex);
+		(void)driver; FINISH_ME /*Internal::LockGuard LG(driver->m_nodeMutex);
 		return driver->BeginControllerCommand(Driver::ControllerCommand_RequestNodeNeighborUpdate,
 		NULL, NULL, true, _nodeId, 0);
+		*/
 	}
 	return false;
 }
@@ -4229,9 +4222,10 @@ bool Manager::DeleteAllReturnRoutes(uint32 const _homeId, uint8 const _nodeId)
 {
 	if (Driver *driver = GetDriver(_homeId))
 	{
-		Internal::LockGuard LG(driver->m_nodeMutex);
+		(void)driver; FINISH_ME /*Internal::LockGuard LG(driver->m_nodeMutex);
 		return driver->BeginControllerCommand(Driver::ControllerCommand_DeleteAllReturnRoutes,
 		NULL, NULL, true, _nodeId, 0);
+		*/
 	}
 	return false;
 }
@@ -4244,9 +4238,11 @@ bool Manager::SendNodeInformation(uint32 const _homeId, uint8 const _nodeId)
 {
 	if (Driver *driver = GetDriver(_homeId))
 	{
+		(void)driver; FINISH_ME /*
 		Internal::LockGuard LG(driver->m_nodeMutex);
 		return driver->BeginControllerCommand(Driver::ControllerCommand_SendNodeInformation,
 		NULL, NULL, true, _nodeId, 0);
+		*/
 	}
 	return false;
 }
@@ -4259,9 +4255,11 @@ bool Manager::CreateNewPrimary(uint32 const _homeId)
 {
 	if (Driver *driver = GetDriver(_homeId))
 	{
+		(void)driver; FINISH_ME /*
 		Internal::LockGuard LG(driver->m_nodeMutex);
 		return driver->BeginControllerCommand(Driver::ControllerCommand_CreateNewPrimary,
 		NULL, NULL, true, 0, 0);
+		*/
 	}
 	return false;
 }
@@ -4274,9 +4272,11 @@ bool Manager::ReceiveConfiguration(uint32 const _homeId)
 {
 	if (Driver *driver = GetDriver(_homeId))
 	{
+		(void)driver; FINISH_ME /*
 		Internal::LockGuard LG(driver->m_nodeMutex);
 		return driver->BeginControllerCommand(Driver::ControllerCommand_ReceiveConfiguration,
 		NULL, NULL, true, 0, 0);
+		*/
 	}
 	return false;
 }
@@ -4289,9 +4289,11 @@ bool Manager::ReplaceFailedNode(uint32 const _homeId, uint8 const _nodeId)
 {
 	if (Driver *driver = GetDriver(_homeId))
 	{
+		(void)driver; FINISH_ME /*
 		Internal::LockGuard LG(driver->m_nodeMutex);
 		return driver->BeginControllerCommand(Driver::ControllerCommand_ReplaceFailedNode,
 		NULL, NULL, true, _nodeId, 0);
+		*/
 	}
 	return false;
 }
@@ -4304,9 +4306,11 @@ bool Manager::TransferPrimaryRole(uint32 const _homeId)
 {
 	if (Driver *driver = GetDriver(_homeId))
 	{
+		(void)driver; FINISH_ME /*
 		Internal::LockGuard LG(driver->m_nodeMutex);
 		return driver->BeginControllerCommand(Driver::ControllerCommand_TransferPrimaryRole,
 		NULL, NULL, true, 0, 0);
+		*/
 	}
 	return false;
 }
@@ -4319,9 +4323,11 @@ bool Manager::RequestNetworkUpdate(uint32 const _homeId, uint8 const _nodeId)
 {
 	if (Driver *driver = GetDriver(_homeId))
 	{
+		(void)driver; FINISH_ME /*
 		Internal::LockGuard LG(driver->m_nodeMutex);
 		return driver->BeginControllerCommand(Driver::ControllerCommand_RequestNetworkUpdate,
 		NULL, NULL, true, _nodeId, 0);
+		*/
 	}
 	return false;
 }
@@ -4334,9 +4340,11 @@ bool Manager::ReplicationSend(uint32 const _homeId, uint8 const _nodeId)
 {
 	if (Driver *driver = GetDriver(_homeId))
 	{
+		(void)driver; FINISH_ME /*
 		Internal::LockGuard LG(driver->m_nodeMutex);
 		return driver->BeginControllerCommand(Driver::ControllerCommand_ReplicationSend,
 		NULL, NULL, true, _nodeId, 0);
+		*/
 	}
 	return false;
 }
@@ -4349,9 +4357,11 @@ bool Manager::CreateButton(uint32 const _homeId, uint8 const _nodeId, uint8 cons
 {
 	if (Driver *driver = GetDriver(_homeId))
 	{
+		(void)driver; FINISH_ME /*
 		Internal::LockGuard LG(driver->m_nodeMutex);
 		return driver->BeginControllerCommand(Driver::ControllerCommand_CreateButton,
 		NULL, NULL, true, _nodeId, _buttonid);
+		*/
 	}
 	return false;
 }
@@ -4364,9 +4374,11 @@ bool Manager::DeleteButton(uint32 const _homeId, uint8 const _nodeId, uint8 cons
 {
 	if (Driver *driver = GetDriver(_homeId))
 	{
+		(void)driver; FINISH_ME /*
 		Internal::LockGuard LG(driver->m_nodeMutex);
 		return driver->BeginControllerCommand(Driver::ControllerCommand_DeleteButton,
 		NULL, NULL, true, _nodeId, _buttonid);
+		*/
 	}
 	return false;
 }
@@ -4380,6 +4392,7 @@ void Manager::SendRawData(uint32 const _homeId, uint8 const _nodeId, string cons
 {
 	if (Driver *driver = GetDriver(_homeId))
 	{
+		(void)driver; FINISH_ME /*
 		Internal::LockGuard LG(driver->m_nodeMutex);
 		Node* node = driver->GetNode(_nodeId);
 		if (node)
@@ -4396,6 +4409,7 @@ void Manager::SendRawData(uint32 const _homeId, uint8 const _nodeId, string cons
 			}
 			driver->SendMsg(msg, Driver::MsgQueue_Send);
 		}
+		*/
 	}
 }
 
@@ -4980,7 +4994,7 @@ if (Driver* driver = GetDriver(_homeId))
 //-----------------------------------------------------------------------------
 string Manager::GetNodeRouteScheme(Node::NodeData *_data)
 {
-switch (_data->m_routeScheme)
+switch (0) TODO(_data->m_routeScheme)
 {
 	case ROUTINGSCHEME_IDLE:
 		return "Idle";

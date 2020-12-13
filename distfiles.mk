@@ -1507,6 +1507,8 @@ DISTFILES =	.gitignore \
 	cpp/src/Node.h \
 	cpp/src/LogCall.cpp\
 	cpp/src/LogCall.h\
+	cpp/src/ZWayHelper.cpp\
+	cpp/src/ZWayHelper.h\
 	cpp/src/Notification.cpp \
 	cpp/src/Notification.h \
 	cpp/src/NotificationCCTypes.cpp \

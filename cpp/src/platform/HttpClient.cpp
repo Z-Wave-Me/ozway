@@ -62,6 +62,8 @@ typedef intptr_t SOCKET;
 #  include "polarssl/ctr_drbg.h"
 #endif
 
+#define NO_ZWAY_H // OZWay: don't include Z-Way headers
+
 #include "platform/HttpClient.h"
 #include "platform/Log.h"
 #include "Utils.h"

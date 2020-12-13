@@ -404,60 +404,7 @@ namespace OpenZWave
 			void WakeUp::SendPending()
 			{
 				m_awake = true;
-				bool reloading = false;
-				m_mutex->Lock();
-				list<Driver::MsgQueueItem>::iterator it = m_pendingQueue.begin();
-				while (it != m_pendingQueue.end())
-				{
-					Driver::MsgQueueItem const& item = *it;
-					if (Driver::MsgQueueCmd_SendMsg == item.m_command)
-					{
-						GetDriver()->SendMsg(item.m_msg, Driver::MsgQueue_WakeUp);
-					}
-					else if (Driver::MsgQueueCmd_QueryStageComplete == item.m_command)
-					{
-						GetDriver()->SendQueryStageComplete(item.m_nodeId, item.m_queryStage);
-					}
-					else if (Driver::MsgQueueCmd_Controller == item.m_command)
-					{
-						GetDriver()->BeginControllerCommand(item.m_cci->m_controllerCommand, item.m_cci->m_controllerCallback, item.m_cci->m_controllerCallbackContext, item.m_cci->m_highPower, item.m_cci->m_controllerCommandNode, item.m_cci->m_controllerCommandArg);
-						delete item.m_cci;
-					}
-					else if (Driver::MsgQueueCmd_ReloadNode == item.m_command)
-					{
-						GetDriver()->ReloadNode(item.m_nodeId);
-						reloading = true;
-					}
-					it = m_pendingQueue.erase(it);
-				}
-				m_mutex->Unlock();
-
-				// Send the device back to sleep, unless we have outstanding queries.
-				bool sendToSleep = m_awake;
-				Node* node = GetNodeUnsafe();
-				if (node != NULL)
-				{
-					if (!node->AllQueriesCompleted())
-					{
-						sendToSleep = false;
-					}
-				}
-
-				/* if we are reloading, the QueryStage_Complete will take care of sending the device back to sleep */
-				if (sendToSleep && !reloading)
-				{
-					if (m_com.GetFlagInt(COMPAT_FLAG_WAKEUP_DELAYNMI) == 0)
-					{
-						SendNoMoreInfo(1);
-
-					}
-					else
-					{
-						Log::Write(LogLevel_Info, GetNodeId(), "  Node %d has delayed sleep of %dms", GetNodeId(), m_com.GetFlagInt(COMPAT_FLAG_WAKEUP_DELAYNMI));
-						TimerThread::TimerCallback callback = bind(&WakeUp::SendNoMoreInfo, this, 1);
-						TimerSetEvent(m_com.GetFlagInt(COMPAT_FLAG_WAKEUP_DELAYNMI), callback, 1);
-					}
-				}
+				zway_device_awake_queue(GetDriver()->zway, GetNodeId());
 			}
 
 //-----------------------------------------------------------------------------

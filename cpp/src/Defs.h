@@ -27,6 +27,16 @@
 
 #ifndef _Defs_H
 #define _Defs_H
+
+// OZWay {
+
+#ifndef NO_ZWAY_H
+#include <ZWayLib.h>
+#include <ZWayHelper.h>
+#endif
+
+// OZWay }
+
 #include <assert.h>
 #include <stdio.h>
 #include <string>
@@ -443,19 +453,6 @@ namespace OpenZWave
 #define SERIAL_API_SETUP_CMD_TX_POWERLEVEL_SET 			0x04
 #define SERIAL_API_SETUP_CMD_TX_POWERLEVEL_GET 			0x08
 #define SERIAL_API_SETUP_CMD_TX_GET_MAX_PAYLOAD_SIZE	0x10
-
-/* RouteScheme Definitions */
-typedef enum TXSTATUS_ROUTING_SCHEME
-{
-	ROUTINGSCHEME_IDLE = 0,
-	ROUTINGSCHEME_DIRECT = 1,
-	ROUTINGSCHEME_CACHED_ROUTE_SR = 2,
-	ROUTINGSCHEME_CACHED_ROUTE = 3,
-	ROUTINGSCHEME_CACHED_ROUTE_NLWR = 4,
-	ROUTINGSCHEME_ROUTE = 5,
-	ROUTINGSCHEME_RESORT_DIRECT = 6,
-	ROUTINGSCHEME_RESORT_EXPLORE = 7
-} TXSTATUS_ROUTING_SCHEME;
 
 /* RouteSpeed Definitions */
 typedef enum TXSTATUS_ROUTE_SPEED

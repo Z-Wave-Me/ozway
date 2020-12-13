@@ -128,10 +128,6 @@ Group::Group(uint32 const _homeId, uint8 const _nodeId, TiXmlElement const* _gro
 		associationElement = associationElement->NextSiblingElement();
 	}
 
-	// Group must be added before OnGroupChanged is called so UpdateNodeRoutes can find it.
-	// Since we do not want to update return routes UpdateNodeRoutes won't find the group
-	// so nothing will go out from here. The not sending of return routes information
-	// only works by a side effect of not finding the group.
 	OnGroupChanged(pending);
 }
 
@@ -382,15 +378,6 @@ void Group::OnGroupChanged(vector<InstanceAssociation> const& _associations)
 		notification->SetHomeAndNodeIds(m_homeId, m_nodeId);
 		notification->SetGroupIdx(m_groupIdx);
 		Manager::Get()->GetDriver(m_homeId)->QueueNotification(notification);
-		// Update routes on remote node if necessary
-		bool update = false;
-		Options::Get()->GetOptionAsBool("PerformReturnRoutes", &update);
-		if (update)
-		{
-			Driver *drv = Manager::Get()->GetDriver(m_homeId);
-			if (drv)
-				drv->UpdateNodeRoutes(m_nodeId);
-		}
 	}
 }
 

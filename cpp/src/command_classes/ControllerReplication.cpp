@@ -264,7 +264,7 @@ namespace OpenZWave
 				}
 				else
 				{
-					GetDriver()->AddNodeStop(m_funcId);
+					// OZWay GetDriver()->AddNodeStop(m_funcId);
 					m_busy = false;
 				}
 			}

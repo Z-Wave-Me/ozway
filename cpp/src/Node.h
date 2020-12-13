@@ -810,7 +810,6 @@ namespace OpenZWave
 					char m_rssi_5[8];
 					uint8 m_ackChannel;
 					uint8 m_lastTxChannel;
-					TXSTATUS_ROUTING_SCHEME m_routeScheme;
 					char m_routeUsed[9];
 					TXSTATUS_ROUTE_SPEED m_routeSpeed;
 					uint8 m_routeTries;
@@ -846,7 +845,6 @@ namespace OpenZWave
 			char m_rssi_5[8];					// RSSI Level of last transmission
 			uint8 m_ackChannel;					// Channel we received the last ACK on
 			uint8 m_lastTxChannel;				// Channel we transmitted the last frame on
-			TXSTATUS_ROUTING_SCHEME m_routeScheme;				// The Scheme used to route the last frame
 			uint8 m_routeUsed[4];				// The Route Taken in the last frame
 			TXSTATUS_ROUTE_SPEED m_routeSpeed;					// Baud Rate of the last frame
 			uint8 m_routeTries;					// The number of attempts to route the last frame

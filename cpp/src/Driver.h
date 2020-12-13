@@ -277,7 +277,7 @@ namespace OpenZWave
 
 			bool HasExtendedTxStatus() const
 			{
-				return m_hasExtendedTxStatus;
+				return true; TODO(Check SDK version and report)
 			}
 
 			uint32 GetHomeId() const
@@ -290,7 +290,7 @@ namespace OpenZWave
 			}
 			uint8 GetSUCNodeId() const
 			{
-				return m_SUCNodeId;
+				return 0; TODO(Get from zway.controller.data.SUCNodeId)
 			}
 			uint16 GetManufacturerId() const
 			{
@@ -319,15 +319,6 @@ namespace OpenZWave
 			string GetLibraryTypeName() const
 			{
 				return m_libraryTypeName;
-			}
-			int32 GetSendQueueCount() const
-			{
-				int32 count = 0;
-				for (int32 i = 0; i < MsgQueue_Count; ++i)
-				{
-					count += (int32) (m_msgQueue[i].size());
-				}
-				return count;
 			}
 
 			/**
@@ -367,7 +358,6 @@ namespace OpenZWave
 			uint8 m_initVersion;								// Version of the Serial API used by the controller.
 			uint8 m_initCaps;									// Set of flags indicating the serial API capabilities (See IsSlave, HasTimerSupport, IsPrimaryController and IsStaticUpdateController above).
 			uint8 m_controllerCaps;							// Set of flags indicating the controller's capabilities (See IsInclusionController above).
-			bool m_hasExtendedTxStatus;						// True if the controller accepted SERIAL_API_SETUP_CMD_TX_STATUS_REPORT
 			uint8 m_Controller_nodeId;						// Z-Wave Controller's own node ID.
 			Node* m_nodes[256];								// Array containing all the node objects.
 			Internal::Platform::Mutex* m_nodeMutex;								// Serializes access to node data
@@ -375,81 +365,6 @@ namespace OpenZWave
 			Internal::CC::ControllerReplication* m_controllerReplication;					// Controller replication is handled separately from the other command classes, due to older hand-held controllers using invalid node IDs.
 
 			uint8 m_transmitOptions;
-
-			//-----------------------------------------------------------------------------
-			//	Receiving Z-Wave messages
-			//-----------------------------------------------------------------------------
-		private:
-			void ProcessMsg(uint8* _data, uint8 _length);
-
-			void HandleGetVersionResponse(uint8* _data);
-			void HandleGetRandomResponse(uint8* _data);
-			void HandleSerialAPISetupResponse(uint8* _data);
-			void HandleGetControllerCapabilitiesResponse(uint8* _data);
-			void HandleGetSerialAPICapabilitiesResponse(uint8* _data);
-			void HandleSerialAPISoftResetResponse(uint8* _data);
-			void HandleEnableSUCResponse(uint8* _data);
-			void HandleSetSUCNodeIdResponse(uint8* _data);
-			void HandleGetSUCNodeIdResponse(uint8* _data);
-			void HandleMemoryGetIdResponse(uint8* _data);
-			/**
-			 *  Process a response to a FUNC_ID_SERIAL_API_GET_INIT_DATA request.
-			 *  <p>
-			 *  The response message contains a bitmap identifying which of the 232 possible nodes
-			 *  in the network are actually present.  These bitmap values are compared with the
-			 *  node map (read in from zwcfg_0x[homeid].xml) to see if the node has already been registered
-			 *  by the OpenZWave library.  If it has (the log will show it as "Known") and this is
-			 *  the first time this message was sent (m_init is false), then AddNodeQuery() is called
-			 *  to retrieve its current state.  If this is a "New" node to OpenZWave, then InitNode()
-			 *  is called.
-			 *  \see AddNodeQuery, InitNode, GetNode, ReleaseNodes
-			 */
-			void HandleSerialAPIGetInitDataResponse(uint8* _data);
-			void HandleGetNodeProtocolInfoResponse(uint8* _data);
-			bool HandleRemoveFailedNodeResponse(uint8* _data);
-			void HandleIsFailedNodeResponse(uint8* _data);
-			bool HandleReplaceFailedNodeResponse(uint8* _data);
-			bool HandleAssignReturnRouteResponse(uint8* _data);
-			bool HandleDeleteReturnRouteResponse(uint8* _data);
-			void HandleSendNodeInformationRequest(uint8* _data);
-			void HandleSendDataResponse(uint8* _data, bool _replication);
-			bool HandleNetworkUpdateResponse(uint8* _data);
-			void HandleGetRoutingInfoResponse(uint8* _data);
-
-			void HandleSendDataRequest(uint8* _data, uint8 _length, bool _replication);
-			void HandleAddNodeToNetworkRequest(uint8* _data);
-			void HandleCreateNewPrimaryRequest(uint8* _data);
-			void HandleControllerChangeRequest(uint8* _data);
-			void HandleSetLearnModeRequest(uint8* _data);
-			void HandleRemoveFailedNodeRequest(uint8* _data);
-			void HandleReplaceFailedNodeRequest(uint8* _data);
-			void HandleRemoveNodeFromNetworkRequest(uint8* _data);
-			void HandleApplicationCommandHandlerRequest(uint8* _data, bool encrypted);
-			void HandlePromiscuousApplicationCommandHandlerRequest(uint8* _data);
-			void HandleAssignReturnRouteRequest(uint8* _data);
-			void HandleDeleteReturnRouteRequest(uint8* _data);
-			void HandleNodeNeighborUpdateRequest(uint8* _data);
-			void HandleNetworkUpdateRequest(uint8* _data);
-			bool HandleApplicationUpdateRequest(uint8* _data);
-			bool HandleRfPowerLevelSetResponse(uint8* _data);
-			bool HandleSerialApiSetTimeoutsResponse(uint8* _data);
-			bool HandleMemoryGetByteResponse(uint8* _data);
-			bool HandleReadMemoryResponse(uint8* _data);
-			void HandleGetVirtualNodesResponse(uint8* _data);
-			bool HandleSetSlaveLearnModeResponse(uint8* _data);
-			void HandleSetSlaveLearnModeRequest(uint8* _data);
-			bool HandleSendSlaveNodeInfoResponse(uint8* _data);
-			void HandleSendSlaveNodeInfoRequest(uint8* _data);
-			void HandleApplicationSlaveCommandRequest(uint8* _data);
-			void HandleSerialAPIResetRequest(uint8* _data);
-
-			void CommonAddNodeStatusRequestHandler(uint8 _funcId, uint8* _data);
-
-			bool m_waitingForAck;							// True when we are waiting for an ACK from the dongle
-			uint8 m_expectedCallbackId;						// If non-zero, we wait for a message with this callback Id
-			uint8 m_expectedReply;							// If non-zero, we wait for a message with this function Id
-			uint8 m_expectedCommandClassId;					// If the expected reply is FUNC_ID_APPLICATION_COMMAND_HANDLER, this value stores the command class we're waiting to hear from
-			uint8 m_expectedNodeId;							// If we are waiting for a FUNC_ID_APPLICATION_COMMAND_HANDLER, make sure we only accept it from this node.
 
 			//-----------------------------------------------------------------------------
 			//	Polling Z-Wave devices
@@ -468,28 +383,9 @@ namespace OpenZWave
 			bool DisablePoll(const ValueID &_valueId);
 			bool isPolled(const ValueID &_valueId);
 			void SetPollIntensity(const ValueID &_valueId, uint8 _intensity);
-			static void PollThreadEntryPoint(Internal::Platform::Event* _exitEvent, void* _context);
-			void PollThreadProc(Internal::Platform::Event* _exitEvent);
 
-			Internal::Platform::Thread* m_pollThread;								// Thread for polling devices on the Z-Wave network
-			struct PollEntry
-			{
-					ValueID m_id;
-					uint8 m_pollCounter;
-			};
-			list<PollEntry> m_pollList;									// List of nodes that need to be polled
-			Internal::Platform::Mutex* m_pollMutex;								// Serialize access to the polling list
 			int32 m_pollInterval;								// Time interval during which all nodes must be polled
 			bool m_bIntervalBetweenPolls;					// if true, the library intersperses m_pollInterval between polls; if false, the library attempts to complete all polls within m_pollInterval
-
-			//-----------------------------------------------------------------------------
-			//	Retrieving Node information
-			//-----------------------------------------------------------------------------
-		public:
-			uint8 GetNodeNumber(Internal::Msg const* _msg) const
-			{
-				return (_msg == NULL ? 0 : _msg->GetTargetNodeId());
-			}
 
 		private:
 			/**
@@ -642,12 +538,7 @@ namespace OpenZWave
 		private:
 			// The public interface is provided via the wrappers in the Manager class
 			void ResetController(Internal::Platform::Event* _evt);
-			void SoftReset();
 			void RequestNodeNeighbors(uint8 const _nodeId, uint32 const _requestFlags);
-
-			bool BeginControllerCommand(ControllerCommand _command, pfnControllerCallback_t _callback, void* _context, bool _highPower, uint8 _nodeId, uint8 _arg);
-			bool CancelControllerCommand();
-			void AddNodeStop(uint8 const _funcId);					// Handle different controller behaviors
 
 			struct ControllerCommandItem
 			{
@@ -672,10 +563,6 @@ namespace OpenZWave
 			void UpdateControllerState(ControllerState const _state, ControllerError const _error = ControllerError_None);
 
 			uint8 m_SUCNodeId;
-
-			void UpdateNodeRoutes(uint8 const_nodeId, bool _doUpdate = false);
-
-			Internal::Platform::Event* m_controllerResetEvent;
 
 			//-----------------------------------------------------------------------------
 			//	Sending Z-Wave messages
@@ -704,31 +591,6 @@ namespace OpenZWave
 			}
 
 		private:
-			/**
-			 *  If there are messages in the send queue (m_sendQueue), gets the next message in the
-			 *  queue and writes it to the serial port.  In sending the message, SendMsg also initializes
-			 *  variables tracking the message's callback ID (m_expectedCallbackId), expected reply
-			 *  (m_expectedReply) and expected command class ID (m_expectedCommandClassId).  It also
-			 *  sets m_waitingForAck to true and increments the message's send attempts counter.
-			 *  <p>
-			 *  If there are no messages in the send queue, then SendMsg checks the query queue to
-			 *  see if there are any outstanding queries that can be processed (target node not asleep).
-			 *  If so, it retrieves the Node object that needs to be queried and calls that node's
-			 *  AdvanceQueries member function.  If this call results in all of the node's queries to be
-			 *  completed, SendMsg will remove the node query item from the query queue.
-			 *  \return TRUE if data was written, FALSE if not
-			 *  \see Msg, m_sendQueue, m_expectedCallbackId, m_expectedReply, m_expectedCommandClassId,
-			 *  m_waitingForAck, Msg::GetSendAttempts, Node::AdvanceQueries, GetCurrentNodeQuery,
-			 *  RemoveNodeQuery, Node::AllQueriesCompleted
-			 */
-			bool WriteNextMsg(MsgQueue const _queue);							// Extracts the first message from the queue, and makes it the current one.
-			bool WriteMsg(string const &str);									// Sends the current message to the Z-Wave network
-			void RemoveCurrentMsg();											// Deletes the current message and cleans up the callback etc states
-			bool MoveMessagesToWakeUpQueue(uint8 const _targetNodeId, bool const _move);		// If a node does not respond, and is of a type that can sleep, this method is used to move all its pending messages to another queue ready for when it wakes up next.
-			bool HandleErrorResponse(uint8 const _error, uint8 const _nodeId, char const* _funcStr, bool _sleepCheck = false);									    // Handle data errors and process consistently. If message is moved to wake-up queue, return true.
-			bool IsExpectedReply(uint8 const _nodeId);						// Determine if reply message is the one we are expecting
-			void SendQueryStageComplete(uint8 const _nodeId, Node::QueryStage const _stage);
-			void RetryQueryStageComplete(uint8 const _nodeId, Node::QueryStage const _stage);
 			void CheckCompletedNodeQueries();									// Send notifications if all awake and/or sleeping nodes have completed their queries
 
 			// Requests to be sent to nodes are assigned to one of five queues.
@@ -815,13 +677,6 @@ namespace OpenZWave
 					ControllerCommandItem* m_cci;
 			};
 
-			list<MsgQueueItem> m_msgQueue[MsgQueue_Count];
-			Internal::Platform::Event* m_queueEvent[MsgQueue_Count];		// Events for each queue, which are signaled when the queue is not empty
-			Internal::Platform::Mutex* m_sendMutex;						// Serialize access to the queues
-			Internal::Msg* m_currentMsg;
-			MsgQueue m_currentMsgQueueSource;			// identifies which queue held m_currentMsg
-			Internal::Platform::TimeStamp m_resendTimeStamp;
-
 			//-----------------------------------------------------------------------------
 			// Network functions
 			//-----------------------------------------------------------------------------
@@ -837,19 +692,8 @@ namespace OpenZWave
 			 * Commands to be used with virtual nodes.
 			 */
 		private:
-			uint32 GetVirtualNeighbors(uint8** o_neighbors);
-			void RequestVirtualNeighbors(MsgQueue const _queue);
-			bool IsVirtualNode(uint8 const _nodeId) const
-			{
-				return ((m_virtualNeighbors[(_nodeId - 1) >> 3] & 1 << ((_nodeId - 1) & 0x07)) != 0);
-			}
-			void SendVirtualNodeInfo(uint8 const _fromNodeId, uint8 const _ToNodeId);
-			void SendSlaveLearnModeOff();
 			void SaveButtons();
 			void ReadButtons(uint8 const _nodeId);
-
-			bool m_virtualNeighborsReceived;
-			uint8 m_virtualNeighbors[NUM_NODE_BITFIELD_BYTES];		// Bitmask containing virtual neighbors
 
 			//-----------------------------------------------------------------------------
 			// SwitchAll
