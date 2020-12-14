@@ -122,40 +122,13 @@ Driver::Driver(string const& _controllerPath, ControllerInterface const& _interf
 
 	// OZWay begin
 	TODO(exceptions)
-	ZWError r;
-	// printf("%p\n", Manager::Get()->m_logger);
-	r = zway_init(&zway, ZSTR(_controllerPath.c_str()), NULL, NULL, NULL, NULL, Manager::Get()->m_logger);
+	ZWError r = zway_init(&zway, ZSTR(_controllerPath.c_str()), NULL, NULL, NULL, NULL, Manager::Get()->m_logger);
 	if (r != NoError)
 	{
 		printf(">> Adding driver error: %s\n", zstrerror(r));
 		return;
 	}
-	r = zway_start(zway, print_zway_terminated, NULL);
-	if (r != NoError)
-	{
-		printf(">> Driver starting error: %s\n", zstrerror(r));
-		return;
-	}
-	r = zway_discover(zway);
-	if (r != NoError)
-	{
-		printf(">> Driver discovering error: %s\n", zstrerror(r));
-		return;
-	}
 
-	// Getting HomeID
-	zdata_acquire_lock(ZDataRoot(zway));
-	TODO(LOG_ERR)
-	{
-		int t;
-		zdata_get_integer(zway_find_controller_data(zway, "nodeId"), &t);
-		m_Controller_nodeId = (uint8)t;
-	}
-	zdata_get_integer(zway_find_controller_data(zway, "homeId"), (int *)&m_homeId);
-	zdata_release_lock(ZDataRoot(zway));
-
-	m_initVersion = 0; TODO(set this field as _data[2] of SerialAPIInit reply)
-	m_initCaps = 0; TODO(set this field as _data[3] of SerialAPIInit reply)
 	//OZWay end
 	
 }
@@ -282,6 +255,33 @@ void Driver::Start()
 	// m_driverThread->Start(Driver::DriverThreadEntryPoint, this);
 	// m_dnsThread->Start(Internal::DNSThread::DNSThreadEntryPoint, m_dns);
 	// m_timerThread->Start(Internal::TimerThread::TimerThreadEntryPoint, m_timer);
+
+	ZWError r = zway_start(zway, print_zway_terminated, NULL);
+	if (r != NoError)
+	{
+		printf(">> Driver starting error: %s\n", zstrerror(r));
+		return;
+	}
+	r = zway_discover(zway);
+	if (r != NoError)
+	{
+		printf(">> Driver discovering error: %s\n", zstrerror(r));
+		return;
+	}
+
+	// Getting HomeID
+	zdata_acquire_lock(ZDataRoot(zway));
+	TODO(LOG_ERR)
+	{
+		int t;
+		zdata_get_integer(zway_find_controller_data(zway, "nodeId"), &t);
+		m_Controller_nodeId = (uint8)t;
+	}
+	zdata_get_integer(zway_find_controller_data(zway, "homeId"), (int *)&m_homeId);
+	zdata_release_lock(ZDataRoot(zway));
+
+	m_initVersion = 0; TODO(set this field as _data[2] of SerialAPIInit reply)
+	m_initCaps = 0; TODO(set this field as _data[3] of SerialAPIInit reply)
 
 	Manager::Get()->SetDriverReady(this, true);
 	ReadCache();
