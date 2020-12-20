@@ -100,6 +100,8 @@ namespace OpenZWave
 					bool SetLevel(uint8 const _instance, uint8 const _level);
 					bool StartLevelChange(uint8 const _instance, SwitchMultilevelDirection const _direction);
 					bool StopLevelChange(uint8 const _instance);
+					
+					static void Watcher(const ZDataRootObject root, ZWDataChangeType type, ZDataHolder data, void *arg);
 			};
 		} // namespace CC
 	} // namespace Internal

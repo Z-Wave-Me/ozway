@@ -43,20 +43,10 @@
 #include "aes/aescpp.h"
 #include "LogCall.h"
 
-//OZWay
+//{ OZWay
 #include "ZWayLib.h"
 #include "ZLogging.h"
-/*
-typedef struct _SwitchBinaryArg SwitchBinaryArg;
-
-struct		_SwitchBinaryArg
-{
-	uint32	home_id;
-	uint32	node_id;
-	void	*arg;
-};
-*/
-//OZWay
+//} OZWay
 
 namespace OpenZWave
 {
@@ -125,9 +115,13 @@ namespace OpenZWave
 			//-----------------------------------------------------------------------------
 			// OZWay begin
 		private:
-			ZWay zway = NULL; //TODO change to m_zway
-			//SwitchBinaryArg args[256];
-			ValueID args[256];
+			ZWay zway = NULL;
+			TODO(change to m_zway)
+		public:
+			ZWay GetZWay() const
+			{
+				return zway;
+			}
 			// OZWay end
 
 			//-----------------------------------------------------------------------------

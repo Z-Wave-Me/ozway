@@ -126,6 +126,7 @@ namespace OpenZWave
 						return m_nodeId;
 					}
 					Driver* GetDriver() const;
+					ZWay GetZWay() const;
 					Node* GetNodeUnsafe() const;
 					Internal::VC::Value* GetValue(uint8 const _instance, uint16 const _index);
 					bool RemoveValue(uint8 const _instance, uint16 const _index);

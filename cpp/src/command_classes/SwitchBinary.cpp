@@ -46,13 +46,6 @@ namespace OpenZWave
 		namespace CC
 		{
 
-			enum SwitchBinaryCmd
-			{
-				SwitchBinaryCmd_Set = 0x01,
-				SwitchBinaryCmd_Get = 0x02,
-				SwitchBinaryCmd_Report = 0x03
-			};
-
 //-----------------------------------------------------------------------------
 // <SwitchBinary::RequestState>
 // Request current state from the device
@@ -76,67 +69,12 @@ namespace OpenZWave
 			{
 				if (m_com.GetFlagBool(COMPAT_FLAG_GETSUPPORTED))
 				{
-					Msg* msg = new Msg("SwitchBinaryCmd_Get", GetNodeId(), REQUEST, FUNC_ID_ZW_SEND_DATA, true, true, FUNC_ID_APPLICATION_COMMAND_HANDLER, GetCommandClassId());
-					msg->SetInstance(this, _instance);
-					msg->Append(GetNodeId());
-					msg->Append(2);
-					msg->Append(GetCommandClassId());
-					msg->Append(SwitchBinaryCmd_Get);
-					msg->Append(GetDriver()->GetTransmitOptions());
-					GetDriver()->SendMsg(msg, _queue);
-					return true;
+					return NoError == zway_cc_switch_binary_get(GetDriver()->GetZWay(), GetNodeId(), _instance, NULL, NULL, NULL);
 				}
 				else
 				{
 					Log::Write(LogLevel_Info, GetNodeId(), "SwitchBinaryCmd_Get Not Supported on this node");
 				}
-				return false;
-			}
-
-//-----------------------------------------------------------------------------
-// <SwitchBinary::HandleMsg>
-// Handle a message from the Z-Wave network
-//-----------------------------------------------------------------------------
-			bool SwitchBinary::HandleMsg(uint8 const* _data, uint32 const _length, uint32 const _instance	// = 1
-					)
-			{
-				if (SwitchBinaryCmd_Report == (SwitchBinaryCmd) _data[0])
-				{
-					Log::Write(LogLevel_Info, GetNodeId(), "Received SwitchBinary report from node %d: level=%s", GetNodeId(), _data[1] ? "On" : "Off");
-
-					// data[1] => Switch state
-					if (Internal::VC::ValueBool* value = static_cast<Internal::VC::ValueBool*>(GetValue(_instance, ValueID_Index_SwitchBinary::Level)))
-					{
-						if (GetVersion() >= 2 && _length >= 4)
-							value->SetTargetValue(_data[2] != 0, _data[3]);
-						value->OnValueRefreshed(_data[1] != 0);
-						value->Release();
-					}
-
-					if (GetVersion() >= 2)
-					{
-
-						// data[2] => target state
-						if (Internal::VC::ValueBool* value = static_cast<Internal::VC::ValueBool*>(GetValue(_instance, ValueID_Index_SwitchBinary::TargetState)))
-						{
-							value->OnValueRefreshed(_data[2] != 0);
-							value->Release();
-						}
-
-						// data[3] might be duration
-						if (_length > 3)
-						{
-							if (Internal::VC::ValueInt* value = static_cast<Internal::VC::ValueInt*>(GetValue(_instance, ValueID_Index_SwitchBinary::Duration)))
-							{
-								value->OnValueRefreshed(decodeDuration(_data[3]));
-								value->Release();
-							}
-						}
-					}
-
-					return true;
-				}
-
 				return false;
 			}
 
@@ -182,24 +120,14 @@ namespace OpenZWave
 //-----------------------------------------------------------------------------
 			void SwitchBinary::SetValueBasic(uint8 const _instance, uint8 const _value)
 			{
-				// Send a request for new value to synchronize it with the BASIC set/report.
-				// In case the device is sleeping, we set the value anyway so the BASIC set/report
-				// stays in sync with it. We must be careful mapping the uint8 BASIC value
-				// into a class specific value.
-				// When the device wakes up, the real requested value will be retrieved.
-				RequestValue(0, 0, _instance, Driver::MsgQueue_Send);
 				if (Node* node = GetNodeUnsafe())
 				{
-					if (Internal::CC::WakeUp* wakeUp = static_cast<Internal::CC::WakeUp*>(node->GetCommandClass(Internal::CC::WakeUp::StaticGetCommandClassId())))
+					(void)node; TODO(why do we need this node?)
+					
+					if (Internal::VC::ValueBool* value = static_cast<Internal::VC::ValueBool*>(GetValue(_instance, 0)))
 					{
-						if (!wakeUp->IsAwake())
-						{
-							if (Internal::VC::ValueBool* value = static_cast<Internal::VC::ValueBool*>(GetValue(_instance, 0)))
-							{
-								value->OnValueRefreshed(_value != 0);
-								value->Release();
-							}
-						}
+						value->OnValueRefreshed(_value != 0);
+						value->Release();
 					}
 				}
 			}
@@ -210,13 +138,7 @@ namespace OpenZWave
 //-----------------------------------------------------------------------------
 			bool SwitchBinary::SetState(uint8 const _instance, bool const _state)
 			{
-				uint8 const nodeId = GetNodeId();
 				uint8 const targetValue = _state ? 0xff : 0;
-
-				Log::Write(LogLevel_Info, nodeId, "SwitchBinary::Set - Setting to %s", _state ? "On" : "Off");
-				Msg* msg = new Msg("SwitchBinaryCmd_Set", nodeId, REQUEST, FUNC_ID_ZW_SEND_DATA, true);
-				msg->SetInstance(this, _instance);
-				msg->Append(nodeId);
 
 				if (GetVersion() >= 2)
 				{
@@ -229,30 +151,64 @@ namespace OpenZWave
 						Log::Write(LogLevel_Info, GetNodeId(), "  Rouding to %d Minutes (over 127 seconds)", encodeDuration(duration)-0x79);
 					else 
 						Log::Write(LogLevel_Info, GetNodeId(), "  Duration: %d seconds", duration);
-
-					msg->Append(4);
-					msg->Append(GetCommandClassId());
-					msg->Append(SwitchBinaryCmd_Set);
-					msg->Append(targetValue);
-					msg->Append(encodeDuration(duration));
+					TODO(duration is not supported in SwitchBinary in Z-Way)
 				}
-				else
-				{
-					msg->Append(3);
-					msg->Append(GetCommandClassId());
-					msg->Append(SwitchBinaryCmd_Set);
-					msg->Append(targetValue);
-				}
-
-				msg->Append(GetDriver()->GetTransmitOptions());
-				GetDriver()->SendMsg(msg, Driver::MsgQueue_Send);
-				return true;
+				return NoError == zway_cc_switch_binary_set(GetDriver()->GetZWay(), GetNodeId(), _instance, targetValue, NULL, NULL, NULL);
 			}
 
+			TODO(Remove this in future)
+			bool SwitchBinary::HandleMsg(uint8 const* _data, uint32 const _length, uint32 const _instance	// = 1
+					)
+			{
+				return false;
+			}
+			
+//-----------------------------------------------------------------------------
+// <SwitchBinary::Watcher>
+// Handles Z-Way events
+//-----------------------------------------------------------------------------
+			void SwitchBinary::Watcher(const ZDataRootObject root, ZWDataChangeType type, ZDataHolder data, void *arg)
+			{
+				LOG_CALL
+				
+				ZWay zway = (ZWay)root;
+				Internal::VC::ValueBool *value = (Internal::VC::ValueBool *)arg;
+				
+				switch(type)
+				{
+					case Updated:
+					case PhantomUpdate:
+					{
+						// level
+						ZWBOOL level;
+						zdata_acquire_lock(root);
+						zdata_get_boolean(zway_find_device_instance_cc_data(zway, value->GetID().GetNodeId(), value->GetID().GetInstance(), StaticGetCommandClassId(), "level"), &level);
+						zdata_release_lock(root);
+						
+						value->OnValueRefreshed(level);
+						value->Release();
+						
+						break;
+					}
+					case Deleted:
+					{
+						delete value;
+						break;
+					}
+					case Invalidated:
+					case ChildCreated:
+					case ChildEvent:
+					{
+						break;
+					}
+				}
+			}
+			
 //-----------------------------------------------------------------------------
 // <SwitchBinary::CreateVars>
 // Create the values managed by this command class
 //-----------------------------------------------------------------------------
+
 			void SwitchBinary::CreateVars(uint8 const _instance)
 			{
 				if (Node* node = GetNodeUnsafe())
@@ -261,8 +217,14 @@ namespace OpenZWave
 					{
 						node->CreateValueInt(ValueID::ValueGenre_System, GetCommandClassId(), _instance, ValueID_Index_SwitchBinary::Duration, "Transition Duration", "Sec", false, false, -1, 0);
 						node->CreateValueBool(ValueID::ValueGenre_System, GetCommandClassId(), _instance, ValueID_Index_SwitchBinary::TargetState, "Target State", "", true, false, true, 0);
+						TODO(Duration and target state are not reported by Z-Way) 
+						// static_cast<Internal::VC::ValueInt*>(GetValue(_instance, ValueID_Index_SwitchBinary::Duration))
+						// static_cast<Internal::VC::ValueBool*>(GetValue(_instance, ValueID_Index_SwitchBinary::TargetState))
 					}
 					node->CreateValueBool(ValueID::ValueGenre_User, GetCommandClassId(), _instance, ValueID_Index_SwitchBinary::Level, "Switch", "", false, false, false, 0);
+					zdata_add_callback(zway_find_device_instance_cc_data(GetDriver()->GetZWay(), GetNodeId(), _instance, StaticGetCommandClassId(), "level"), Watcher, TRUE, 
+						static_cast<Internal::VC::ValueBool*>(GetValue(_instance, ValueID_Index_SwitchBinary::Level))
+					);
 				}
 			}
 		} // namespace CC

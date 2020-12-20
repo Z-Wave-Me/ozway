@@ -74,55 +74,43 @@ extern char ozw_version_string[];
 
 // OZWay begin
 
-void Manager::z_switch_binary_watcher(const ZDataRootObject root, ZWDataChangeType type, ZDataHolder data, void *arg)
+/*
+void Manager::z_switch_nif_watcher(const ZDataRootObject root, ZWDataChangeType type, ZDataHolder data, void *arg)
 {
 	LOG_CALL
 	Notification *notification;
-//	SwitchBinaryArg swBinArg = *(SwitchBinaryArg *)arg;
 	ValueID valueId = *(ValueID *)arg;
 
-	printf(">>>SwBinData %x\n", type);
+	printf(">>>NIF %x\n", type);
 	switch(type)
 	{
 		case Updated:
 		{
 			notification = new Notification(Notification::Type_ValueChanged);
-//			notification->SetHomeAndNodeIds(swBinArg.home_id, swBinArg.node_id);
+			notification->SetHomeAndNodeIds(valueId.GetHomeId(), valueId.GetNodeId());
 			notification->SetValueId(valueId);
-			for (list<Watcher*>::iterator it = Manager::Get()->m_watchers.begin(); it != Manager::Get()->m_watchers.end(); ++it)
-				(*it)->m_callback(notification, (*it)->m_context);
-//			QueueNotification(notification);
+			NotifyWatchers(notification);
 			break;
 		}
 		case PhantomUpdate:
 		{
-			notification = new Notification(Notification::Type_ValueRefreshed);
-//			notification->SetHomeAndNodeIds(swBinArg.home_id, swBinArg.node_id);
-			notification->SetValueId(valueId);
-			for (list<Watcher*>::iterator it = Manager::Get()->m_watchers.begin(); it != Manager::Get()->m_watchers.end(); ++it)
-				(*it)->m_callback(notification, (*it)->m_context);
-//			QueueNotification(notification);
-			break;
-		}
-		case Invalidated:
-		{
+			// do nothing if NIF has not changed
 			break;
 		}
 		case Deleted:
 		{
+			delete ValueID;
 			break;
 		}
+		case Invalidated:
 		case ChildCreated:
-		{
-			break;
-		}
 		case ChildEvent:
 		{
 			break;
 		}
 	}
-	printf("value_get\n");
 }
+*/
 
 void Manager::z_watcher(const ZWay zway, ZWDeviceChangeType type, ZWBYTE node_id, ZWBYTE instance_id, ZWBYTE command_id, void *arg)
 {
@@ -131,22 +119,39 @@ void Manager::z_watcher(const ZWay zway, ZWDeviceChangeType type, ZWBYTE node_id
 	
 	Driver* driver = (Driver *)arg;
 	
-//	Manager::Get()->m_notificationMutex->Lock();
 	Notification *notification;
 	uint32 home_id;
 
 	zdata_acquire_lock(ZDataRoot(zway));
 	zdata_get_integer(zway_find_controller_data(zway, "homeId"), (int *)&home_id);
 	zdata_release_lock(ZDataRoot(zway));
-	switch (type & (~EnumerateExisting)) // TODO QueueNotification()
+	
+	switch (type & (~EnumerateExisting))
 	{
 		case DeviceAdded:
 		{
+			TODO(NIF) //zdata_add_callback(zway_find_device_data(zway, node_id, "nodeInformationFrame"), z_nif_watcher, TRUE, new ValueID(home_id, node_id));
+			
+			notification = new Notification(Notification::Type_NodeNew);
+			notification->SetHomeAndNodeIds(home_id, node_id);
+			Manager::Get()->NotifyWatchers(notification);
+			
 			notification = new Notification(Notification::Type_NodeAdded);
 			notification->SetHomeAndNodeIds(home_id, node_id);
-			for (list<Watcher*>::iterator it = Manager::Get()->m_watchers.begin(); it != Manager::Get()->m_watchers.end(); ++it)
-				(*it)->m_callback(notification, (*it)->m_context);
-//			QueueNotification(notification);
+			Manager::Get()->NotifyWatchers(notification);
+			
+			notification = new Notification(Notification::Type_NodeProtocolInfo);
+			notification->SetHomeAndNodeIds(home_id, node_id);
+			Manager::Get()->NotifyWatchers(notification);
+			
+			notification = new Notification(Notification::Type_EssentialNodeQueriesComplete);
+			notification->SetHomeAndNodeIds(home_id, node_id);
+			Manager::Get()->NotifyWatchers(notification);
+			
+			notification = new Notification(Notification::Type_NodeQueriesComplete);
+			notification->SetHomeAndNodeIds(home_id, node_id);
+			Manager::Get()->NotifyWatchers(notification);
+
 			break;
 		}
 		case DeviceRemoved:
@@ -161,12 +166,9 @@ void Manager::z_watcher(const ZWay zway, ZWDeviceChangeType type, ZWBYTE node_id
 			*/
 			notification = new Notification(Notification::Type_NodeRemoved);
 			notification->SetHomeAndNodeIds(home_id, node_id);
-			for (list<Watcher*>::iterator it = Manager::Get()->m_watchers.begin(); it != Manager::Get()->m_watchers.end(); ++it)
-				(*it)->m_callback(notification, (*it)->m_context);
-//			QueueNotification(notification);
+			Manager::Get()->NotifyWatchers(notification);
 			break;
 		}
-//TODO implement InstanceAdded & InctanceRemoved
 		case InstanceAdded:
 		{
 			break;
@@ -181,37 +183,19 @@ void Manager::z_watcher(const ZWay zway, ZWDeviceChangeType type, ZWBYTE node_id
 			
 			Node* node = driver->GetNode(node_id);
 			
-			switch (command_id)
+			Internal::CC::CommandClass* cc = node->GetCommandClass(command_id);
+			
+			if (cc) break; // CC already exists on this device
+			
+			cc = node->AddCommandClass(command_id);
+			if (!cc)
 			{
-//ZWEXPORT ZWError zdata_add_callback(ZDataHolder data, ZDataChangeCallback callback, ZWBOOL watch_children, void *arg);
-				case 0x25:
-				{
-					Internal::CC::CommandClass* cc = node->GetCommandClass(command_id);
-					
-					if (cc) break; // CC already exists on this device
-					
-					cc = node->AddCommandClass(command_id);
-					if (!cc)
-					{
-						Log::Write(LogLevel_Error, "Can not create command class %d on device %d", command_id, node_id, instance_id);
-						break;
-					}
-					
-                                        cc->CreateVars();
-                                        
-                                        /* Dont' do this for Controller Nodes */
-                                        if (driver->GetControllerNodeId() == node_id) break;
-
-					notification = new Notification(Notification::Type_ValueAdded);
-//ValueID(uint32 const _homeId, uint8 const _nodeId, ValueGenre const _genre, uint8 const _commandClassId, uint8 const _instance, uint16 const _valueIndex, ValueType const _type) :
-					notification->SetValueId(ValueID(home_id, node_id, ValueID::ValueGenre_User, command_id, instance_id, ValueID_Index_SwitchBinary::Level, ValueID::ValueType_Bool)); //TODO fix genre & valueType
-					for (list<Watcher*>::iterator it = Manager::Get()->m_watchers.begin(); it != Manager::Get()->m_watchers.end(); ++it)
-						(*it)->m_callback(notification, (*it)->m_context);
-//					QueueNotification(notification);
-					zdata_add_callback(zway_find_device_instance_cc_data(zway, node_id, instance_id, 0x25, "level"), /*SumClass::*/z_switch_binary_watcher, TRUE, new ValueID(home_id, node_id, ValueID::ValueGenre_User, command_id, instance_id, 0, ValueID::ValueType_Bool));
-					break;
-				}
+				Log::Write(LogLevel_Error, "Can not create command class %d on device %d", command_id, node_id, instance_id);
+				break;
 			}
+			
+			cc->CreateVars();
+						
 			break;
 		}
 		case CommandRemoved:// TODO
@@ -222,7 +206,6 @@ void Manager::z_watcher(const ZWay zway, ZWDeviceChangeType type, ZWBYTE node_id
 			break;
 		}
 	}
-	// Manager::Get()->m_notificationMutex->Unlock();
 }
 // OZWay end
 
@@ -2136,21 +2119,45 @@ bool Manager::GetValueAsBool(ValueID const& _id, bool* o_value)
 {
 	bool res = false;
 
-//	zdata_get_boolean(zway_find_device_instance_cc_data(zway, node_id, instance_id, 0x25, "level"), &b);
 	if (o_value)
 	{
 		if (ValueID::ValueType_Bool == _id.GetType())
 		{
 			if (Driver* driver = GetDriver(_id.GetHomeId()))
 			{
-				ZWBOOL b;
-
-				zdata_acquire_lock(ZDataRoot(driver->zway));
-				zdata_get_boolean(zway_find_device_instance_cc_data(driver->zway, _id.GetNodeId(), _id.GetInstance(), 0x25, "level"), &b);
-				zdata_release_lock(ZDataRoot(driver->zway));
-				
-				*o_value = b;
+				Internal::LockGuard LG(driver->m_nodeMutex);
+				if (Internal::VC::ValueBool* value = static_cast<Internal::VC::ValueBool*>(driver->GetValue(_id)))
+				{
+					*o_value = value->GetValue();
+					value->Release();
+					res = true;
+				}
+				else
+				{
+					OZW_ERROR(OZWException::OZWEXCEPTION_INVALID_VALUEID, "Invalid ValueID passed to GetValueAsBool");
+				}
 			}
+		}
+		else if (ValueID::ValueType_Button == _id.GetType())
+		{
+			if (Driver* driver = GetDriver(_id.GetHomeId()))
+			{
+				Internal::LockGuard LG(driver->m_nodeMutex);
+				if (Internal::VC::ValueButton* value = static_cast<Internal::VC::ValueButton*>(driver->GetValue(_id)))
+				{
+					*o_value = value->IsPressed();
+					value->Release();
+					res = true;
+				}
+				else
+				{
+					OZW_ERROR(OZWException::OZWEXCEPTION_INVALID_VALUEID, "Invalid ValueID passed to GetValueAsBool");
+				}
+			}
+		}
+		else
+		{
+			OZW_ERROR(OZWException::OZWEXCEPTION_CANNOT_CONVERT_VALUEID, "ValueID passed to GetValueAsBool is not a Bool or Button Value");
 		}
 	}
 
@@ -2783,10 +2790,6 @@ bool Manager::SetValue(ValueID const& _id, uint8 _pos, bool const _value)
 	return res;
 }
 
-// OZWay begin
-
-// typedef void (*ZJobCustomCallback)(const ZWay zway, ZWBYTE functionId, void* arg);
-// zway_cc_switch_binary_set(ZWay zway, ZWBYTE node_id, ZWBYTE instance_id, ZWBOOL value, ZJobCustomCallback successCallback, ZJobCustomCallback failureCallback, void* callbackArg);
 //-----------------------------------------------------------------------------
 // <Manager::SetValue>
 // Sets the value from a bool
@@ -2801,30 +2804,15 @@ bool Manager::SetValue(ValueID const& _id, bool const _value)
 		{
 			if (_id.GetNodeId() != driver->GetControllerNodeId())
 			{
-				switch (_id.GetCommandClassId())
+				Internal::LockGuard LG(driver->m_nodeMutex);
+				if (Internal::VC::ValueBool* value = static_cast<Internal::VC::ValueBool*>(driver->GetValue(_id)))
 				{
-					case 0x25:
-					{
-						switch (_id.GetIndex())
-						{
-							case ValueID_Index_SwitchBinary::Level:
-							{
-								zway_cc_switch_binary_set(driver->zway, _id.GetNodeId(), _id.GetInstance(), _value, NULL, NULL, NULL);
-								break;
-							}
-							case ValueID_Index_SwitchBinary::TargetState:
-							{
-								_NOT_SUPPORTED_(driver->zway);
-								break;
-							}
-							case ValueID_Index_SwitchBinary::Duration:
-							{
-								_NOT_YET_IMPLEMENTED_(driver->zway);
-								break;
-							}
-						}
-						break;
-					}
+					res = value->Set(_value);
+					value->Release();
+				}
+				else
+				{
+					OZW_ERROR(OZWException::OZWEXCEPTION_INVALID_VALUEID, "Invalid ValueID passed to SetValue");
 				}
 			}
 		}
@@ -2836,7 +2824,6 @@ bool Manager::SetValue(ValueID const& _id, bool const _value)
 
 	return res;
 }
-// OZWay end
 
 //-----------------------------------------------------------------------------
 // <Manager::SetValue>

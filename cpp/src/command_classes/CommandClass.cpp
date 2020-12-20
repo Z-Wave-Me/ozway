@@ -110,6 +110,15 @@ namespace OpenZWave
 			}
 
 //-----------------------------------------------------------------------------
+// <CommandClass::GetZWay>
+// Get a pointer to zway
+//-----------------------------------------------------------------------------
+			ZWay CommandClass::GetZWay() const
+			{
+				return (Manager::Get()->GetDriver(m_homeId))->GetZWay();
+			}
+
+//-----------------------------------------------------------------------------
 // <CommandClass::GetNode>
 // Get a pointer to our node without locking the mutex
 //-----------------------------------------------------------------------------

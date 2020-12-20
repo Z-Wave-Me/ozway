@@ -45,50 +45,21 @@ namespace OpenZWave
 	{
 		namespace CC
 		{
-
-			enum SwitchMultilevelCmd
-			{
-				SwitchMultilevelCmd_Set = 0x01,
-				SwitchMultilevelCmd_Get = 0x02,
-				SwitchMultilevelCmd_Report = 0x03,
-				SwitchMultilevelCmd_StartLevelChange = 0x04,
-				SwitchMultilevelCmd_StopLevelChange = 0x05,
-				SwitchMultilevelCmd_SupportedGet = 0x06,
-				SwitchMultilevelCmd_SupportedReport = 0x07
-			};
-
-			static uint8 c_directionParams[] =
-			{ 0x00, 0x40, 0x00, 0x40 };
-
-			static char const* c_directionDebugLabels[] =
-			{ "Up", "Down", "Inc", "Dec" };
-
+			TODO(Rever buttons back if needed - including the handler code)
+			/*
 			static char const* c_switchLabelsPos[] =
 			{ "Undefined", "On", "Up", "Open", "Clockwise", "Right", "Forward", "Push" };
 
 			static char const* c_switchLabelsNeg[] =
 			{ "Undefined", "Off", "Down", "Close", "Counter-Clockwise", "Left", "Reverse", "Pull" };
-
+			*/
+			
 //-----------------------------------------------------------------------------
 // <SwitchMultilevel::RequestState>
 // Request current state from the device
 //-----------------------------------------------------------------------------
 			bool SwitchMultilevel::RequestState(uint32 const _requestFlags, uint8 const _instance, Driver::MsgQueue const _queue)
 			{
-				if (_requestFlags & RequestFlag_Static) {
-					if (GetVersion() >= 3)
-					{
-						// Request the supported switch types
-						Msg* msg = new Msg("SwitchMultilevelCmd_SupportedGet", GetNodeId(), REQUEST, FUNC_ID_ZW_SEND_DATA, true, true, FUNC_ID_APPLICATION_COMMAND_HANDLER, GetCommandClassId());
-						msg->Append(GetNodeId());
-						msg->Append(2);
-						msg->Append(GetCommandClassId());
-						msg->Append(SwitchMultilevelCmd_SupportedGet);
-						msg->Append(GetDriver()->GetTransmitOptions());
-						GetDriver()->SendMsg(msg, Driver::MsgQueue_Send);
-					}
-					return true;
-				}
 				if (_requestFlags & RequestFlag_Dynamic)
 				{
 					return RequestValue(_requestFlags, ValueID_Index_SwitchMultiLevel::Level, _instance, _queue);
@@ -107,122 +78,13 @@ namespace OpenZWave
 				{
 					if (m_com.GetFlagBool(COMPAT_FLAG_GETSUPPORTED))
 					{
-						Msg* msg = new Msg("SwitchMultilevelCmd_Get", GetNodeId(), REQUEST, FUNC_ID_ZW_SEND_DATA, true, true, FUNC_ID_APPLICATION_COMMAND_HANDLER, GetCommandClassId());
-						msg->SetInstance(this, _instance);
-						msg->Append(GetNodeId());
-						msg->Append(2);
-						msg->Append(GetCommandClassId());
-						msg->Append(SwitchMultilevelCmd_Get);
-						msg->Append(GetDriver()->GetTransmitOptions());
-						GetDriver()->SendMsg(msg, _queue);
-						
-						return true;
+						return NoError == zway_cc_switch_multilevel_get(GetDriver()->GetZWay(), GetNodeId(), _instance, NULL, NULL, NULL);
 					}
 					else
 					{
 						Log::Write(LogLevel_Info, GetNodeId(), "SwitchMultilevelCmd_Get Not Supported on this node");
 					}
 				}
-				return false;
-			}
-
-//-----------------------------------------------------------------------------
-// <SwitchMultilevel::HandleMsg>
-// Handle a message from the Z-Wave network
-//-----------------------------------------------------------------------------
-			bool SwitchMultilevel::HandleMsg(uint8 const* _data, uint32 const _length, uint32 const _instance	// = 1
-					)
-			{
-				if (SwitchMultilevelCmd_Report == (SwitchMultilevelCmd) _data[0])
-				{
-					Log::Write(LogLevel_Info, GetNodeId(), "Received SwitchMultiLevel report: level=%d", _data[1]);
-
-					if (Internal::VC::ValueByte* value = static_cast<Internal::VC::ValueByte*>(GetValue(_instance, ValueID_Index_SwitchMultiLevel::Level)))
-					{
-						/* Target Value - 0 to 100 is valid values, 0xFF is also valid */
-						if ((GetVersion() >= 4) && ((_data[2] <= 100) || (_data[2] == 0xFF)))
-							value->SetTargetValue(_data[2], _data[3]);
-						value->OnValueRefreshed(_data[1]);
-						value->Release();
-					}
-
-					if (GetVersion() >= 4)
-					{
-
-						// data[2] => target value
-						if (Internal::VC::ValueByte* value = static_cast<Internal::VC::ValueByte*>(GetValue(_instance, ValueID_Index_SwitchMultiLevel::TargetValue)))
-						{
-							value->OnValueRefreshed(_data[2]);
-							value->Release();
-						}
-
-						// data[3] might be duration
-						if (_length > 3)
-						{
-							if (Internal::VC::ValueInt* value = static_cast<Internal::VC::ValueInt*>(GetValue(_instance, ValueID_Index_SwitchMultiLevel::Duration)))
-							{
-								value->OnValueRefreshed(decodeDuration(_data[3]));
-								value->Release();
-							}
-						}
-					}
-
-					return true;
-				}
-
-				if (SwitchMultilevelCmd_SupportedReport == (SwitchMultilevelCmd) _data[0])
-				{
-					uint8 switchType1 = _data[1] & 0x1f;
-					uint8 switchType2 = _data[2] & 0x1f;
-					uint8 switchtype1label = switchType1;
-					uint8 switchtype2label = switchType2;
-					if (switchtype1label > 7) /* size of c_switchLabelsPos, c_switchLabelsNeg */
-					{
-						Log::Write(LogLevel_Warning, GetNodeId(), "switchtype1label Value was greater than range. Setting to Invalid");
-						switchtype1label = 0;
-					}
-					if (switchtype2label > 7) /* sizeof c_switchLabelsPos, c_switchLabelsNeg */
-					{
-						Log::Write(LogLevel_Warning, GetNodeId(), "switchtype2label Value was greater than range. Setting to Invalid");
-						switchtype2label = 0;
-					}
-
-					Log::Write(LogLevel_Info, GetNodeId(), "Received SwitchMultiLevel supported report: Switch1=%s/%s, Switch2=%s/%s", c_switchLabelsPos[switchtype1label], c_switchLabelsNeg[switchtype1label], c_switchLabelsPos[switchtype2label], c_switchLabelsNeg[switchtype2label]);
-					ClearStaticRequest(StaticRequest_Version);
-
-					// Set the labels on the values
-					Internal::VC::ValueButton* button;
-
-					if (switchType1)
-					{
-						if ( NULL != (button = static_cast<Internal::VC::ValueButton*>(GetValue(_instance, ValueID_Index_SwitchMultiLevel::Bright))))
-						{
-							button->SetLabel(c_switchLabelsPos[switchtype1label]);
-							button->Release();
-						}
-						if ( NULL != (button = static_cast<Internal::VC::ValueButton*>(GetValue(_instance, ValueID_Index_SwitchMultiLevel::Dim))))
-						{
-							button->SetLabel(c_switchLabelsNeg[switchtype1label]);
-							button->Release();
-						}
-					}
-
-					if (switchType2)
-					{
-						if ( NULL != (button = static_cast<Internal::VC::ValueButton*>(GetValue(_instance, ValueID_Index_SwitchMultiLevel::Inc))))
-						{
-							button->SetLabel(c_switchLabelsPos[switchtype2label]);
-							button->Release();
-						}
-						if ( NULL != (button = static_cast<Internal::VC::ValueButton*>(GetValue(_instance, ValueID_Index_SwitchMultiLevel::Dec))))
-						{
-							button->SetLabel(c_switchLabelsNeg[switchtype2label]);
-							button->Release();
-						}
-					}
-					return true;
-				}
-				Log::Write(LogLevel_Warning, GetNodeId(), "Recieved a Unhandled SwitchMultiLevel Command: %d", _data[0]);
 				return false;
 			}
 
@@ -366,24 +228,13 @@ namespace OpenZWave
 //-----------------------------------------------------------------------------
 			void SwitchMultilevel::SetValueBasic(uint8 const _instance, uint8 const _value)
 			{
-				// Send a request for new value to synchronize it with the BASIC set/report.
-				// In case the device is sleeping, we set the value anyway so the BASIC set/report
-				// stays in sync with it. We must be careful mapping the uint8 BASIC value
-				// into a class specific value.
-				// When the device wakes up, the real requested value will be retrieved.
-				RequestValue(0, 0, _instance, Driver::MsgQueue_Send);
 				if (Node* node = GetNodeUnsafe())
 				{
-					if (Internal::CC::WakeUp* wakeUp = static_cast<Internal::CC::WakeUp*>(node->GetCommandClass(Internal::CC::WakeUp::StaticGetCommandClassId())))
+					(void)node; TODO(do we need this node?)
+					if (Internal::VC::ValueByte* value = static_cast<Internal::VC::ValueByte*>(GetValue(_instance, ValueID_Index_SwitchMultiLevel::Level)))
 					{
-						if (!wakeUp->IsAwake())
-						{
-							if (Internal::VC::ValueByte* value = static_cast<Internal::VC::ValueByte*>(GetValue(_instance, ValueID_Index_SwitchMultiLevel::Level)))
-							{
-								value->OnValueRefreshed(_value != 0);
-								value->Release();
-							}
-						}
+						value->OnValueRefreshed(_value != 0);
+						value->Release();
 					}
 				}
 			}
@@ -394,11 +245,8 @@ namespace OpenZWave
 //-----------------------------------------------------------------------------
 			bool SwitchMultilevel::SetLevel(uint8 const _instance, uint8 const _level)
 			{
-				Log::Write(LogLevel_Info, GetNodeId(), "SwitchMultilevel::Set - Setting to level %d", _level);
-				Msg* msg = new Msg("SwitchMultilevelCmd_Set", GetNodeId(), REQUEST, FUNC_ID_ZW_SEND_DATA, true);
-				msg->SetInstance(this, _instance);
-				msg->Append(GetNodeId());
-
+				uint32 _duration = 0xFF; // Factory default
+				
 				if (GetVersion() >= 2)
 				{
 					Internal::VC::ValueInt* durationValue = static_cast<Internal::VC::ValueInt*>(GetValue(_instance, ValueID_Index_SwitchMultiLevel::Duration));
@@ -410,24 +258,13 @@ namespace OpenZWave
 						Log::Write(LogLevel_Info, GetNodeId(), "  Rouding to %d Minutes (over 127 seconds)", encodeDuration(duration)-0x79);
 					else 
 						Log::Write(LogLevel_Info, GetNodeId(), "  Duration: %d seconds", duration);
-
-					msg->Append(4);
-					msg->Append(GetCommandClassId());
-					msg->Append(SwitchMultilevelCmd_Set);
-					msg->Append(_level);
-					msg->Append(encodeDuration(duration));
+					
+					_duration = encodeDuration(duration);
 				}
-				else
-				{
-					msg->Append(3);
-					msg->Append(GetCommandClassId());
-					msg->Append(SwitchMultilevelCmd_Set);
-					msg->Append(_level);
-				}
-
-				msg->Append(GetDriver()->GetTransmitOptions());
-				GetDriver()->SendMsg(msg, Driver::MsgQueue_Send);
-				return true;
+				
+				TODO(ignore start level)
+				TODO(startlevel)
+				return NoError == zway_cc_switch_multilevel_set(GetDriver()->GetZWay(), GetNodeId(), _instance, _level, _duration, NULL, NULL, NULL);
 			}
 
 //-----------------------------------------------------------------------------
@@ -438,25 +275,19 @@ namespace OpenZWave
 			{
 				Log::Write(LogLevel_Info, GetNodeId(), "SwitchMultilevel::StartLevelChange - Starting a level change");
 
-				uint8 length = 4;
-				if (_direction > 3) /* size of  c_directionParams, c_directionDebugLabels */
+				if (_direction > 3)
 				{
 					Log::Write(LogLevel_Warning, GetNodeId(), "_direction Value was greater than range. Dropping");
 					return false;
 				}
-				uint8 direction = c_directionParams[_direction];
-				Log::Write(LogLevel_Info, GetNodeId(), "  Direction:          %s", c_directionDebugLabels[_direction]);
+				Log::Write(LogLevel_Info, GetNodeId(), "  Direction:          %d", _direction);
 
-				if (Internal::VC::ValueBool* ignoreStartLevel = static_cast<Internal::VC::ValueBool*>(GetValue(_instance, ValueID_Index_SwitchMultiLevel::IgnoreStartLevel)))
+				uint8 ignoreStartLevel = 1;
+				if (Internal::VC::ValueBool* ignoreStartLevelValue = static_cast<Internal::VC::ValueBool*>(GetValue(_instance, ValueID_Index_SwitchMultiLevel::IgnoreStartLevel)))
 				{
-					if (ignoreStartLevel->GetValue())
-					{
-						// Set the ignore start level flag
-						direction |= 0x20;
-					}
-					ignoreStartLevel->Release();
+					ignoreStartLevel = ignoreStartLevelValue->GetValue();
+					ignoreStartLevelValue->Release();
 				}
-				Log::Write(LogLevel_Info, GetNodeId(), "  Ignore Start Level: %s", (direction & 0x20) ? "True" : "False");
 
 				uint8 startLevel = 0;
 				if (Internal::VC::ValueByte* startLevelValue = static_cast<Internal::VC::ValueByte*>(GetValue(_instance, ValueID_Index_SwitchMultiLevel::StartLevel)))
@@ -469,7 +300,6 @@ namespace OpenZWave
 				uint32 duration = -1;
 				if (Internal::VC::ValueInt* durationValue = static_cast<Internal::VC::ValueInt*>(GetValue(_instance, ValueID_Index_SwitchMultiLevel::Duration)))
 				{
-					length = 5;
 					duration = durationValue->GetValue();
 					durationValue->Release();
 					Log::Write(LogLevel_Info, GetNodeId(), "  Duration:           %d", duration);
@@ -480,47 +310,15 @@ namespace OpenZWave
 				{
 					if (Internal::VC::ValueByte* stepValue = static_cast<Internal::VC::ValueByte*>(GetValue(_instance, ValueID_Index_SwitchMultiLevel::Step)))
 					{
-						length = 6;
 						step = stepValue->GetValue();
 						stepValue->Release();
 						Log::Write(LogLevel_Info, GetNodeId(), "  Step Size:          %d", step);
 					}
 				}
-
-				Msg* msg = new Msg("SwitchMultilevelCmd_StartLevelChange", GetNodeId(), REQUEST, FUNC_ID_ZW_SEND_DATA, true);
-				msg->SetInstance(this, _instance);
-				msg->Append(GetNodeId());
-				msg->Append(length);
-				msg->Append(GetCommandClassId());
-				msg->Append(SwitchMultilevelCmd_StartLevelChange);
-				if (GetVersion() == 2)
-				{
-					direction &= 0x60;
-				}
-				else if (GetVersion() >= 3)
-				{
-					/* we don't support secondary switch, so we mask that out as well */
-					direction &= 0xE0;
-				}
-
-				msg->Append(direction);
-				msg->Append(startLevel);
-
-				if (length >= 5)
-				{
-					msg->Append(encodeDuration(duration));
-				}
-
-				if (length == 6)
-				{
-					msg->Append(step);
-				}
-
-				msg->Append(GetDriver()->GetTransmitOptions());
-				GetDriver()->SendMsg(msg, Driver::MsgQueue_Send);
-				/* get a updated Level Value from the Device */
-				RequestValue(0, ValueID_Index_SwitchMultiLevel::Level, _instance, Driver::MsgQueue_Send);
-				return true;
+				
+				TODO(incdec)
+				TODO(step)
+				return NoError == zway_cc_switch_multilevel_start_level_change(GetDriver()->GetZWay(), GetNodeId(), _instance, _direction, duration, ignoreStartLevel, startLevel, 0, 0xFF, NULL, NULL, NULL);
 			}
 
 //-----------------------------------------------------------------------------
@@ -529,19 +327,55 @@ namespace OpenZWave
 //-----------------------------------------------------------------------------
 			bool SwitchMultilevel::StopLevelChange(uint8 const _instance)
 			{
-				Log::Write(LogLevel_Info, GetNodeId(), "SwitchMultilevel::StopLevelChange - Stopping the level change");
-				Msg* msg = new Msg("SwitchMultilevelCmd_StopLevelChange", GetNodeId(), REQUEST, FUNC_ID_ZW_SEND_DATA, true);
-				msg->SetInstance(this, _instance);
-				msg->Append(GetNodeId());
-				msg->Append(2);
-				msg->Append(GetCommandClassId());
-				msg->Append(SwitchMultilevelCmd_StopLevelChange);
-				msg->Append(GetDriver()->GetTransmitOptions());
-				GetDriver()->SendMsg(msg, Driver::MsgQueue_Send);
+				return NoError == zway_cc_switch_multilevel_stop_level_change(GetDriver()->GetZWay(), GetNodeId(), _instance, NULL, NULL, NULL);
+			}
 
-				/* get a updated Level Value from the Device */
-				RequestValue(0, ValueID_Index_SwitchMultiLevel::Level, _instance, Driver::MsgQueue_Send);
-				return true;
+			TODO(Remove this in future)
+			bool SwitchMultilevel::HandleMsg(uint8 const* _data, uint32 const _length, uint32 const _instance	// = 1
+					)
+			{
+				return false;
+			}
+			
+//-----------------------------------------------------------------------------
+// <SwitchMultilevel::Watcher>
+// Handles Z-Way events
+//-----------------------------------------------------------------------------
+			void SwitchMultilevel::Watcher(const ZDataRootObject root, ZWDataChangeType type, ZDataHolder data, void *arg)
+			{
+				LOG_CALL
+				
+				ZWay zway = (ZWay)root;
+				Internal::VC::ValueByte *value = (Internal::VC::ValueByte *)arg;
+				
+				switch(type)
+				{
+					case Updated:
+					case PhantomUpdate:
+					{
+						// level
+						int level;
+						zdata_acquire_lock(root);
+						zdata_get_integer(zway_find_device_instance_cc_data(zway, value->GetID().GetNodeId(), value->GetID().GetInstance(), StaticGetCommandClassId(), "level"), &level);
+						zdata_release_lock(root);
+						
+						value->OnValueRefreshed(level);
+						value->Release();
+						
+						break;
+					}
+					case Deleted:
+					{
+						delete value;
+						break;
+					}
+					case Invalidated:
+					case ChildCreated:
+					case ChildEvent:
+					{
+						break;
+					}
+				}
 			}
 
 //-----------------------------------------------------------------------------
@@ -555,6 +389,7 @@ namespace OpenZWave
 					if (GetVersion() >= 4)
 					{
 						node->CreateValueByte(ValueID::ValueGenre_System, GetCommandClassId(), _instance, ValueID_Index_SwitchMultiLevel::TargetValue, "Target Value", "", true, false, 0, 0);
+						TODO(Duration and target state are not reported by Z-Way)
 					}
 					if (GetVersion() >= 3)
 					{
@@ -565,8 +400,12 @@ namespace OpenZWave
 					if (GetVersion() >= 2)
 					{
 						node->CreateValueInt(ValueID::ValueGenre_System, GetCommandClassId(), _instance, ValueID_Index_SwitchMultiLevel::Duration, "Dimming Duration", "", false, false, -1, 0);
+						TODO(Duration and target state are not reported by Z-Way)
 					}
 					node->CreateValueByte(ValueID::ValueGenre_User, GetCommandClassId(), _instance, ValueID_Index_SwitchMultiLevel::Level, "Level", "", false, false, 0, 0);
+					zdata_add_callback(zway_find_device_instance_cc_data(GetDriver()->GetZWay(), GetNodeId(), _instance, StaticGetCommandClassId(), "level"), Watcher, TRUE,
+						static_cast<Internal::VC::ValueBool*>(GetValue(_instance, ValueID_Index_SwitchBinary::Level))
+					);
 					node->CreateValueButton(ValueID::ValueGenre_User, GetCommandClassId(), _instance, ValueID_Index_SwitchMultiLevel::Bright, "Bright", 0);
 					node->CreateValueButton(ValueID::ValueGenre_User, GetCommandClassId(), _instance, ValueID_Index_SwitchMultiLevel::Dim, "Dim", 0);
 					node->CreateValueBool(ValueID::ValueGenre_System, GetCommandClassId(), _instance, ValueID_Index_SwitchMultiLevel::IgnoreStartLevel, "Ignore Start Level", "", false, false, true, 0);
