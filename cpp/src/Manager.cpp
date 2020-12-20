@@ -618,7 +618,8 @@ void Manager::SetDriverReady(Driver* _driver, bool success)
 		notification->SetHomeAndNodeIds(_driver->GetHomeId(), _driver->GetControllerNodeId());
 		if (!success)
 			notification->SetComPort(_driver->GetControllerPath());
-		_driver->QueueNotification(notification);
+		for (list<Watcher*>::iterator it = Manager::Get()->m_watchers.begin(); it != Manager::Get()->m_watchers.end(); ++it)
+			(*it)->m_callback(notification, (*it)->m_context);
 	}
 }
 
