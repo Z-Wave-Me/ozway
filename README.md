@@ -1,3 +1,25 @@
+# OZWay - OpenZWave API compatible wrapper around Z-Wave.Me Z-Way library
+
+## Getting started
+
+Currently tested only on Raspberry OS and Linux
+
+To test it with Home Assistant do:
+
+    git clone https://github.com/Z-Wave-Me/ozway.git && cd ozway && git checkout debug
+
+    git clone https://github.com/home-assistant/python-openzwave && cd python-openzwave && git checkout hass
+
+    make -C ~/ozway/ BUILD=DEBUG && cd ~/python-openzwave && LOCAL_OPENZWAVE=~/ozway python3 setup.py --flavor=dev bdist_wheel && sudo cp build/lib.linux-armv7l-3.7/libopenzwave.cpython-37m-arm-linux-gnueabihf.so /srv/user/lib/python3.7/site-packages/ && sudo rm -R /srv/user/lib/python3.7/site-packages/python_openzwave/ozw_config && sudo cp -R ~/ozway/config /srv/user/lib/python3.7/site-packages/python_openzwave/ozw_config && sudo cp /srv/snapshot/lib/python3.7/site-packages/python_openzwave/ozw_config/__init__.py /srv/user/lib/python3.7/site-packages/python_openzwave/ozw_config && sudo chown user:user /srv/user/lib/python3.7/site-packages/python_openzwave/ozw_config -R
+
+(it is assumeed that hass is installed under user *user*)
+
+## Original ReadMe
+
+*(the text below is to be fixed on further stages of the OZWay project)*
+
+
+
 ![Open-ZWave Library](https://github.com/OpenZWave/open-zwave-web/raw/master/gfx/OZW_SF.png)
 ==================
 
