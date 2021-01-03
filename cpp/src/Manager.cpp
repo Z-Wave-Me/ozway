@@ -73,58 +73,15 @@ extern uint16_t ozw_vers_revision;
 extern char ozw_version_string[];
 
 // OZWay begin
-
-/*
-void Manager::z_switch_nif_watcher(const ZDataRootObject root, ZWDataChangeType type, ZDataHolder data, void *arg)
-{
-	LOG_CALL
-	Notification *notification;
-	ValueID valueId = *(ValueID *)arg;
-
-	printf(">>>NIF %x\n", type);
-	switch(type)
-	{
-		case Updated:
-		{
-			notification = new Notification(Notification::Type_ValueChanged);
-			notification->SetHomeAndNodeIds(valueId.GetHomeId(), valueId.GetNodeId());
-			notification->SetValueId(valueId);
-			NotifyWatchers(notification);
-			break;
-		}
-		case PhantomUpdate:
-		{
-			// do nothing if NIF has not changed
-			break;
-		}
-		case Deleted:
-		{
-			delete ValueID;
-			break;
-		}
-		case Invalidated:
-		case ChildCreated:
-		case ChildEvent:
-		{
-			break;
-		}
-	}
-}
-*/
-
 void Manager::z_watcher(const ZWay zway, ZWDeviceChangeType type, ZWBYTE node_id, ZWBYTE instance_id, ZWBYTE command_id, void *arg)
 {
 	LOG_CALL
 	printf("T %i, N %i:%i:%i\n", type, node_id, instance_id, command_id);
 	
 	Driver* driver = (Driver *)arg;
+	uint32 home_id = driver->GetHomeId();
 	
 	Notification *notification;
-	uint32 home_id;
-
-	zdata_acquire_lock(ZDataRoot(zway));
-	zdata_get_integer(zway_find_controller_data(zway, "homeId"), (int *)&home_id);
-	zdata_release_lock(ZDataRoot(zway));
 	
 	switch (type & (~EnumerateExisting))
 	{
@@ -132,26 +89,18 @@ void Manager::z_watcher(const ZWay zway, ZWDeviceChangeType type, ZWBYTE node_id
 		{
 			TODO(NIF) //zdata_add_callback(zway_find_device_data(zway, node_id, "nodeInformationFrame"), z_nif_watcher, TRUE, new ValueID(home_id, node_id));
 			
-			notification = new Notification(Notification::Type_NodeNew);
-			notification->SetHomeAndNodeIds(home_id, node_id);
-			Manager::Get()->NotifyWatchers(notification);
-			
 			notification = new Notification(Notification::Type_NodeAdded);
 			notification->SetHomeAndNodeIds(home_id, node_id);
-			Manager::Get()->NotifyWatchers(notification);
+			driver->QueueNotification(notification);
 			
 			notification = new Notification(Notification::Type_NodeProtocolInfo);
 			notification->SetHomeAndNodeIds(home_id, node_id);
-			Manager::Get()->NotifyWatchers(notification);
+			driver->QueueNotification(notification);
 			
 			notification = new Notification(Notification::Type_EssentialNodeQueriesComplete);
 			notification->SetHomeAndNodeIds(home_id, node_id);
-			Manager::Get()->NotifyWatchers(notification);
+			driver->QueueNotification(notification);
 			
-			notification = new Notification(Notification::Type_NodeQueriesComplete);
-			notification->SetHomeAndNodeIds(home_id, node_id);
-			Manager::Get()->NotifyWatchers(notification);
-
 			break;
 		}
 		case DeviceRemoved:
@@ -166,7 +115,7 @@ void Manager::z_watcher(const ZWay zway, ZWDeviceChangeType type, ZWBYTE node_id
 			*/
 			notification = new Notification(Notification::Type_NodeRemoved);
 			notification->SetHomeAndNodeIds(home_id, node_id);
-			Manager::Get()->NotifyWatchers(notification);
+			driver->QueueNotification(notification);
 			break;
 		}
 		case InstanceAdded:
@@ -496,14 +445,36 @@ bool Manager::AddDriver(string const& _controllerPath, Driver::ControllerInterfa
 	Driver* driver = new Driver(_controllerPath, _interface);
 	m_pendingDrivers.push_back(driver);
 	m_drivers.push_back(driver);
+
 	driver->Start();
-	
 	// if (!driver->Start(_controllerPath))
 	// 	return false;
 	
-	// OZWay begin
-	zway_device_add_callback(driver->zway, DeviceAdded | DeviceRemoved | InstanceAdded | InstanceRemoved | CommandAdded | CommandRemoved | EnumerateExisting, /*SumClass::*/z_watcher, driver);
-	// OZWay end
+	// At this moment callbacks starts to be called - driver need to be started
+	zway_device_add_callback(driver->zway, DeviceAdded | DeviceRemoved | InstanceAdded | InstanceRemoved | CommandAdded | CommandRemoved | EnumerateExisting, z_watcher, driver);
+
+	
+	// Notify watchers that nodes are done
+	Notification *notification;
+	uint32 home_id = driver->GetHomeId();
+	{
+		Internal::LockGuard LG(driver->m_nodeMutex);
+		for (uint8 node_id = 0; node_id < 255; node_id++)
+		{
+			if (driver->m_nodes[node_id] != NULL)
+			{
+				notification = new Notification(Notification::Type_NodeQueriesComplete);
+				notification->SetHomeAndNodeIds(home_id, node_id);
+				driver->QueueNotification(notification);
+			}
+		}
+	}
+	notification = new Notification(Notification::Type_AwakeNodesQueried);
+	notification->SetHomeAndNodeIds(home_id, 255);
+	driver->QueueNotification(notification);
+	// purge the queue
+	driver->NotifyWatchers();
+	
 	Log::Write(LogLevel_Info, "mgr,     Added driver for controller %s", _controllerPath.c_str());
 	return true;
 }
