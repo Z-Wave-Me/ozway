@@ -194,6 +194,10 @@ void Manager::z_watcher(const ZWay zway, ZWDeviceChangeType type, ZWBYTE node_id
 				break;
 			}
 			
+			TODO(in OZW there is a confusion between channel 0 and channel 1)
+			// OZW: We set instance + 1 to fix problem with 0 instance meaning in OZW no instance at all
+			cc->SetInstance(instance_id + 1);
+			
 			cc->CreateVars();
 						
 			break;

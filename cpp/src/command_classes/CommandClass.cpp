@@ -155,6 +155,25 @@ namespace OpenZWave
 			}
 
 //-----------------------------------------------------------------------------
+// <CommandClass::GetVersion>
+// Returns CC version
+//-----------------------------------------------------------------------------
+			uint8 CommandClass::GetVersion() const
+			{
+				int version = 0;
+				uint8 n_instances = GetNumInstances();
+				for (uint8 instance = 0; instance < n_instances; instance++)
+				{
+					if (zdata_get_integer(zway_find_device_instance_cc_data(GetZWay(), GetNodeId(), instance, GetCommandClassId(), "version"), &version) == NoError && version > 0)
+					{
+						break;
+					}
+				}
+				return (uint8)version;
+				TODO(remove m_dom.GetFlagByte(STATE_FLAG_CCVERSION))
+			}
+
+//-----------------------------------------------------------------------------
 // <CommandClass::SetInstances>
 // Instances as set by the MultiInstance V1 command class
 //-----------------------------------------------------------------------------

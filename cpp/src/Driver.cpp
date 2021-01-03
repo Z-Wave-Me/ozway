@@ -284,7 +284,7 @@ void Driver::Start()
 	m_initCaps = 0; TODO(set this field as _data[3] of SerialAPIInit reply)
 
 	Manager::Get()->SetDriverReady(this, true);
-	ReadCache();
+	//ReadCache();
 
 	//OZWay begin
 	zdata_acquire_lock(ZDataRoot(zway));

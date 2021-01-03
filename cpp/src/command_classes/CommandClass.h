@@ -109,10 +109,8 @@ namespace OpenZWave
 						return 1;
 					}
 
-					uint8 GetVersion() const
-					{
-						return m_dom.GetFlagByte(STATE_FLAG_CCVERSION);
-					}
+					uint8 GetVersion() const;
+					
 					Bitfield const* GetInstances() const
 					{
 						return &m_instances;
@@ -156,7 +154,7 @@ namespace OpenZWave
 					/* overridden in the MultiInstance CC to set the Global Label for each Instance */
 					virtual void SetInstanceLabel(uint8 const _instance, char *label);
 					string GetInstanceLabel(uint8 const _instance);
-					uint8 GetNumInstances()
+					uint8 GetNumInstances() const
 					{
 						return (uint8) m_endPointMap.size();
 					}
