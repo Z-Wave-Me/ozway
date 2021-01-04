@@ -114,7 +114,6 @@ Node::Node(uint32 const _homeId, uint8 const _nodeId) :
 
 	TODO(remove this)
 	AddCommandClass(Internal::CC::NoOperation::StaticGetCommandClassId());
-	AddCommandClass(Internal::CC::ManufacturerSpecific::StaticGetCommandClassId());
 }
 
 //-----------------------------------------------------------------------------
