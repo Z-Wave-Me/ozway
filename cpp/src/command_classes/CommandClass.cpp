@@ -164,7 +164,7 @@ namespace OpenZWave
 				uint8 n_instances = GetNumInstances();
 				for (uint8 instance = 0; instance < n_instances; instance++)
 				{
-					if (zdata_get_integer(zway_find_device_instance_cc_data(GetZWay(), GetNodeId(), instance, GetCommandClassId(), "version"), &version) == NoError && version > 0)
+					if (zdata_get_integer(zway_find_device_instance_cc_data(GetZWay(), GetNodeId(), instance - 1, GetCommandClassId(), "version"), &version) == NoError && version > 0)
 					{
 						break;
 					}
@@ -885,8 +885,55 @@ namespace OpenZWave
 			void CommandClass::CreateVars(uint8 const _instance)
 			{
 			}
+			
+			TODO(Remove this in future)
+			bool CommandClass::HandleMsg(uint8 const* _data, uint32 const _length, uint32 const _instance
+					)
+			{
+				Log::Write(LogLevel_Error, GetNodeId(), "CommandClass %s HandleMsg is called - should never happen", GetCommandClassName().c_str());
+				return false;
+			}
 
+//-----------------------------------------------------------------------------
+// <CommandClass::Watcher>
+// Handles Z-Way events
+//-----------------------------------------------------------------------------
+			void CommandClass::Watcher(ZWDataChangeType type, ZDataHolder data, uint8 instance)
+			{
+				Log::Write(LogLevel_Error, GetNodeId(), "CommandClass %s has no own Watcher", GetCommandClassName().c_str());
+			}
+			
+//-----------------------------------------------------------------------------
+// <CommandClass::_Watcher>
+// Handles Z-Way events (wraps Watcher)
+//-----------------------------------------------------------------------------
+			void CommandClass::_Watcher(const ZDataRootObject root, ZWDataChangeType type, ZDataHolder data, void *arg)
+			{
+				WatcherRef *watcherRef = (WatcherRef *)arg;
+				
+				zdata_acquire_lock(root);
+				watcherRef->cc->Watcher(type, data, watcherRef->instance);
+				zdata_release_lock(root);
+				
+				if (type == Deleted)
+				{
+					free(watcherRef); // it was the last usage - delete this structure
+				}
+			}
 
+			
+//-----------------------------------------------------------------------------
+// <CommandClass::AddWatcher>
+// Add listener to the Z-Way events handler
+//-----------------------------------------------------------------------------
+			void CommandClass::AddWatcher(uint8 const _instance, string name)
+			{
+				WatcherRef *watcherRef = (WatcherRef *)malloc(sizeof(WatcherRef));
+				watcherRef->cc = this;
+				watcherRef->instance = _instance;
+				zdata_add_callback(zway_find_device_instance_cc_data(GetDriver()->GetZWay(), GetNodeId(), _instance - 1, GetCommandClassId(), name.c_str()), _Watcher, TRUE, watcherRef);
+			}
+			
 		} // namespace CC
 	} // namespace Internal
 } // namespace OpenZWave

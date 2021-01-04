@@ -264,7 +264,7 @@ namespace OpenZWave
 				
 				TODO(ignore start level)
 				TODO(startlevel)
-				return NoError == zway_cc_switch_multilevel_set(GetDriver()->GetZWay(), GetNodeId(), _instance, _level, _duration, NULL, NULL, NULL);
+				return NoError == zway_cc_switch_multilevel_set(GetDriver()->GetZWay(), GetNodeId(), _instance - 1, _level, _duration, NULL, NULL, NULL);
 			}
 
 //-----------------------------------------------------------------------------
@@ -318,7 +318,7 @@ namespace OpenZWave
 				
 				TODO(incdec)
 				TODO(step)
-				return NoError == zway_cc_switch_multilevel_start_level_change(GetDriver()->GetZWay(), GetNodeId(), _instance, _direction, duration, ignoreStartLevel, startLevel, 0, 0xFF, NULL, NULL, NULL);
+				return NoError == zway_cc_switch_multilevel_start_level_change(GetDriver()->GetZWay(), GetNodeId(), _instance - 1, _direction, duration, ignoreStartLevel, startLevel, 0, 0xFF, NULL, NULL, NULL);
 			}
 
 //-----------------------------------------------------------------------------
@@ -327,46 +327,29 @@ namespace OpenZWave
 //-----------------------------------------------------------------------------
 			bool SwitchMultilevel::StopLevelChange(uint8 const _instance)
 			{
-				return NoError == zway_cc_switch_multilevel_stop_level_change(GetDriver()->GetZWay(), GetNodeId(), _instance, NULL, NULL, NULL);
+				return NoError == zway_cc_switch_multilevel_stop_level_change(GetDriver()->GetZWay(), GetNodeId(), _instance - 1, NULL, NULL, NULL);
 			}
 
 //-----------------------------------------------------------------------------
 // <SwitchMultilevel::Watcher>
 // Handles Z-Way events
 //-----------------------------------------------------------------------------
-			void SwitchMultilevel::Watcher(const ZDataRootObject root, ZWDataChangeType type, ZDataHolder data, void *arg)
+			void SwitchMultilevel::Watcher(ZWDataChangeType type, ZDataHolder data, uint8 instance)
 			{
 				LOG_CALL
 				
-				ZWay zway = (ZWay)root;
-				Internal::VC::ValueByte *value = (Internal::VC::ValueByte *)arg;
+				ZWay zway = GetZWay();
 				
-				switch(type)
+				if ((type & ~PhantomUpdate) == Updated)
 				{
-					case Updated:
-					case PhantomUpdate:
+					if (strcmp(zdata_get_path(data), "level") == 0)
 					{
-						// level
 						int level;
-						zdata_acquire_lock(root);
-						zdata_get_integer(zway_find_device_instance_cc_data(zway, value->GetID().GetNodeId(), value->GetID().GetInstance(), StaticGetCommandClassId(), "level"), &level);
-						zdata_release_lock(root);
+						LOG_ERR(zdata_get_integer(zway_find_device_instance_cc_data(zway, GetNodeId(), instance - 1, StaticGetCommandClassId(), "level"), &level));
 						
+						Internal::VC::ValueByte *value = static_cast<Internal::VC::ValueByte*>(GetValue(instance, ValueID_Index_SwitchBinary::Level));
 						value->OnValueRefreshed(level);
 						value->Release();
-						
-						break;
-					}
-					case Deleted:
-					{
-						delete value;
-						break;
-					}
-					case Invalidated:
-					case ChildCreated:
-					case ChildEvent:
-					{
-						break;
 					}
 				}
 			}
@@ -396,9 +379,7 @@ namespace OpenZWave
 						TODO(Duration and target state are not reported by Z-Way)
 					}
 					node->CreateValueByte(ValueID::ValueGenre_User, GetCommandClassId(), _instance, ValueID_Index_SwitchMultiLevel::Level, "Level", "", false, false, 0, 0);
-					zdata_add_callback(zway_find_device_instance_cc_data(GetDriver()->GetZWay(), GetNodeId(), _instance, StaticGetCommandClassId(), "level"), Watcher, TRUE,
-						static_cast<Internal::VC::ValueBool*>(GetValue(_instance, ValueID_Index_SwitchBinary::Level))
-					);
+					AddWatcher(_instance, "level");
 					node->CreateValueButton(ValueID::ValueGenre_User, GetCommandClassId(), _instance, ValueID_Index_SwitchMultiLevel::Bright, "Bright", 0);
 					node->CreateValueButton(ValueID::ValueGenre_User, GetCommandClassId(), _instance, ValueID_Index_SwitchMultiLevel::Dim, "Dim", 0);
 					node->CreateValueBool(ValueID::ValueGenre_System, GetCommandClassId(), _instance, ValueID_Index_SwitchMultiLevel::IgnoreStartLevel, "Ignore Start Level", "", false, false, true, 0);

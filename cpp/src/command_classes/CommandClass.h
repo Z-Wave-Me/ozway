@@ -285,7 +285,18 @@ namespace OpenZWave
 					uint32 m_sentCnt;				// Number of messages sent from this command class.
 					uint32 m_receivedCnt;				// Number of messages received from this commandclass.
 
+				protected:
+					void AddWatcher(uint8 _instance, string name);
+					virtual void Watcher(ZWDataChangeType type, ZDataHolder data, uint8 instance);
+				private:
+					static void _Watcher(const ZDataRootObject root, ZWDataChangeType type, ZDataHolder data, void *arg);
 			};
+
+			typedef struct WatcherRef
+			{
+					CommandClass *cc;
+					uint8 instance;
+			} WatcherRef;
 //@}
 		}// namespace CC
 	} // namespace Internal

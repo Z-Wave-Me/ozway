@@ -89,7 +89,7 @@ namespace OpenZWave
 					{
 					}
 					
-					static void Watcher(const ZDataRootObject root, ZWDataChangeType type, ZDataHolder data, void *arg);
+					virtual void Watcher(ZWDataChangeType type, ZDataHolder data, uint8 instance);
 			};
 		} // namespace CC
 	} // namespace Internal
