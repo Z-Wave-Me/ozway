@@ -330,13 +330,6 @@ namespace OpenZWave
 				return NoError == zway_cc_switch_multilevel_stop_level_change(GetDriver()->GetZWay(), GetNodeId(), _instance, NULL, NULL, NULL);
 			}
 
-			TODO(Remove this in future)
-			bool SwitchMultilevel::HandleMsg(uint8 const* _data, uint32 const _length, uint32 const _instance	// = 1
-					)
-			{
-				return false;
-			}
-			
 //-----------------------------------------------------------------------------
 // <SwitchMultilevel::Watcher>
 // Handles Z-Way events

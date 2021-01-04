@@ -155,13 +155,6 @@ namespace OpenZWave
 				}
 				return NoError == zway_cc_switch_binary_set(GetDriver()->GetZWay(), GetNodeId(), _instance, targetValue, NULL, NULL, NULL);
 			}
-
-			TODO(Remove this in future)
-			bool SwitchBinary::HandleMsg(uint8 const* _data, uint32 const _length, uint32 const _instance	// = 1
-					)
-			{
-				return false;
-			}
 			
 //-----------------------------------------------------------------------------
 // <SwitchBinary::Watcher>

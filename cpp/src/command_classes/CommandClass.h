@@ -88,7 +88,7 @@ namespace OpenZWave
 					virtual string const GetCommandClassName() const = 0;
 					string const GetCommandClassLabel();
 					void SetCommandClassLabel(string label);
-					virtual bool HandleMsg(uint8 const* _data, uint32 const _length, uint32 const _instance = 1) = 0;
+					virtual bool HandleMsg(uint8 const* _data, uint32 const _length, uint32 const _instance = 1);
 					virtual bool HandleIncomingMsg(uint8 const* _data, uint32 const _length, uint32 const _instance = 1);
 					virtual bool SetValue(Internal::VC::Value const& _value)
 					{

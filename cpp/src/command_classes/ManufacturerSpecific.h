@@ -72,7 +72,6 @@ namespace OpenZWave
 					{
 						return StaticGetCommandClassName();
 					}
-					virtual bool HandleMsg(uint8 const* _data, uint32 const _length, uint32 const _instance = 1) override;
 					virtual uint8 GetMaxVersion() override
 					{
 						return 2;
