@@ -50,21 +50,6 @@ namespace OpenZWave
 		namespace CC
 		{
 
-			enum ManufacturerSpecificCmd
-			{
-				ManufacturerSpecificCmd_Get = 0x04,
-				ManufacturerSpecificCmd_Report = 0x05,
-				ManufacturerSpecificCmd_DeviceGet = 0x06,
-				ManufacturerSpecificCmd_DeviceReport = 0x07
-			};
-
-			enum
-			{
-				DeviceSpecificGet_DeviceIDType_FactoryDefault = 0x00,
-				DeviceSpecificGet_DeviceIDType_SerialNumber = 0x01,
-				DeviceSpecificGet_DeviceIDType_PseudoRandom = 0x02,
-			};
-
 //-----------------------------------------------------------------------------
 // <ManufacturerSpecific::ManufacturerSpecific>
 // Constructor
@@ -81,45 +66,14 @@ namespace OpenZWave
 //-----------------------------------------------------------------------------
 			bool ManufacturerSpecific::RequestState(uint32 const _requestFlags, uint8 const _instance, Driver::MsgQueue const _queue)
 			{
-
-				bool res = false;
-				if (_instance != 1) {
-					/* Not applicable to get this info on multiple instances */
-					return res;
-				}
-
-				if (GetVersion() > 1)
-				{
-					if (_requestFlags & RequestFlag_Static)
-					{
-						{
-							Msg* msg = new Msg("ManufacturerSpecificCmd_DeviceGet_DeviceIDType", GetNodeId(), REQUEST, FUNC_ID_ZW_SEND_DATA, true, true, FUNC_ID_APPLICATION_COMMAND_HANDLER, GetCommandClassId());
-							msg->SetInstance(this, _instance);
-							msg->Append(GetNodeId());
-							msg->Append(3);
-							msg->Append(GetCommandClassId());
-							msg->Append(ManufacturerSpecificCmd_DeviceGet);
-							msg->Append(DeviceSpecificGet_DeviceIDType_FactoryDefault);
-							msg->Append(GetDriver()->GetTransmitOptions());
-							GetDriver()->SendMsg(msg, _queue);
-						}
-						res = true;
-					}
-				}
-
-				return res;
+				// nothing to do, Z-Way is requesting that data during interview
+				return true;
 			}
 
 			bool ManufacturerSpecific::Init() {
 				if (m_com.GetFlagBool(COMPAT_FLAG_GETSUPPORTED))
 				{
-					Msg* msg = new Msg("ManufacturerSpecificCmd_Get", GetNodeId(), REQUEST, FUNC_ID_ZW_SEND_DATA, true, true, FUNC_ID_APPLICATION_COMMAND_HANDLER, GetCommandClassId());
-					msg->Append(GetNodeId());
-					msg->Append(2);
-					msg->Append(GetCommandClassId());
-					msg->Append(ManufacturerSpecificCmd_Get);
-					msg->Append(GetDriver()->GetTransmitOptions());
-					GetDriver()->SendMsg(msg, Driver::MsgQueue_Query);
+					// nothing to do, Z-Way is requesting that data during interview
 					return true;
 				}
 				else
@@ -134,7 +88,9 @@ namespace OpenZWave
 			{
 
 				string configPath = "";
-				std::shared_ptr<Internal::ProductDescriptor> product = GetDriver()->GetManufacturerSpecificDB()->getProduct(manufacturerId, productType, productId);
+				
+				TODO(Remove OZW XML files?)
+				std::shared_ptr<Internal::ProductDescriptor> product = NULL; // GetDriver()->GetManufacturerSpecificDB()->getProduct(manufacturerId, productType, productId);
 
 				Node *node = GetNodeUnsafe();
 				if (!product)
@@ -164,99 +120,117 @@ namespace OpenZWave
 
 			}
 
+
+			
 //-----------------------------------------------------------------------------
-// <ManufacturerSpecific::HandleMsg>
-// Handle a message from the Z-Wave network
+// <ManufacturerSpecific::SetManufacturerProductId>
+// Set manufacturer, product type and id
 //-----------------------------------------------------------------------------
-			bool ManufacturerSpecific::HandleMsg(uint8 const* _data, uint32 const _length, uint32 const _instance	// = 1
-					)
+			void ManufacturerSpecific::SetManufacturerProductId(uint8 instance)
 			{
-				if (ManufacturerSpecificCmd_Report == (ManufacturerSpecificCmd) _data[0])
-				{
-
-					// first two bytes are manufacturer id code
-					uint16 manufacturerId = (((uint16) _data[1]) << 8) | (uint16) _data[2];
-
-					// next four are product type and product id
-					uint16 productType = (((uint16) _data[3]) << 8) | (uint16) _data[4];
-					uint16 productId = (((uint16) _data[5]) << 8) | (uint16) _data[6];
-
-					if (Node* node = GetNodeUnsafe())
-					{
-						// Attempt to create the config parameters
-						SetProductDetails(manufacturerId, productType, productId);
-						ClearStaticRequest(StaticRequest_Values);
-						node->m_manufacturerSpecificClassReceived = true;
-
-						if (node->getConfigPath().size() > 0)
-						{
-							LoadConfigXML();
-						}
-
-						Log::Write(LogLevel_Info, GetNodeId(), "Received manufacturer specific report from node %d: Manufacturer=%s, Product=%s", GetNodeId(), node->GetManufacturerName().c_str(), node->GetProductName().c_str());
-						Log::Write(LogLevel_Info, GetNodeId(), "Node Identity Codes: %.4x:%.4x:%.4x", manufacturerId, productType, productId);
-					}
-
-					// Notify the watchers of the name changes
-					Notification* notification = new Notification(Notification::Type_NodeNaming);
-					notification->SetHomeAndNodeIds(GetHomeId(), GetNodeId());
-					GetDriver()->QueueNotification(notification);
-
-					return true;
-				}
-				else if (ManufacturerSpecificCmd_DeviceReport == (ManufacturerSpecificCmd) _data[0])
-				{
-					uint8 deviceIDType = (_data[1] & 0x07);
-					uint8 dataFormat = (_data[2] & 0xe0) >> 0x05;
-					uint8 data_length = (_data[2] & 0x1f);
-					uint8 const* deviceIDData = &_data[3];
-					string deviceID = "";
-					for (int i = 0; i < data_length; i++)
-					{
-						char temp_chr[32];
-						memset(temp_chr, 0, sizeof(temp_chr));
-						if (dataFormat == 0x00)
-						{
-							temp_chr[0] = deviceIDData[i];
-						}
-						else
-						{
-							snprintf(temp_chr, sizeof(temp_chr), "%.2x", deviceIDData[i]);
-						}
-						deviceID += temp_chr;
-					}
-					if (deviceIDType == DeviceSpecificGet_DeviceIDType_FactoryDefault)
-					{
-						if (!GetValue(_instance, ValueID_Index_ManufacturerSpecific::DeviceID)) {
-							if (Node* node = GetNodeUnsafe())
-							{
-								node->CreateValueString(ValueID::ValueGenre_System, GetCommandClassId(), _instance, ValueID_Index_ManufacturerSpecific::DeviceID, "Device ID", "", true, false, "", 0);
-							}
-						}
-						Internal::VC::ValueString *default_value = static_cast<Internal::VC::ValueString*>(GetValue(_instance, ValueID_Index_ManufacturerSpecific::DeviceID));
-						default_value->OnValueRefreshed(deviceID);
-						default_value->Release();
-						Log::Write(LogLevel_Info, GetNodeId(), "Got ManufacturerSpecific FactoryDefault: %s", deviceID.c_str());
-					}
-					else if (deviceIDType == DeviceSpecificGet_DeviceIDType_SerialNumber)
-					{
-						if (!GetValue(_instance, ValueID_Index_ManufacturerSpecific::SerialNumber)) {
-							if (Node* node = GetNodeUnsafe())
-							{
-								node->CreateValueString(ValueID::ValueGenre_System, GetCommandClassId(), _instance, ValueID_Index_ManufacturerSpecific::SerialNumber, "Serial Number", "", true, false, "", 0);
-							}
-						}
-						Internal::VC::ValueString *serial_value = static_cast<Internal::VC::ValueString*>(GetValue(_instance, ValueID_Index_ManufacturerSpecific::SerialNumber));
-						serial_value->OnValueRefreshed(deviceID);
-						serial_value->Release();
-						Log::Write(LogLevel_Info, GetNodeId(), "Got ManufacturerSpecific SerialNumber: %s", deviceID.c_str());
-
-					}
-					return true;
-				}
-
-				return false;
+				zdata_acquire_lock((ZDataRootObject)GetZWay());
+				_SetManufacturerProductId(instance);
+				zdata_release_lock((ZDataRootObject)GetZWay());
 			}
+//-----------------------------------------------------------------------------
+// <ManufacturerSpecific::_SetManufacturerProductId>
+// Set manufacturer, product type and id
+//-----------------------------------------------------------------------------
+			void ManufacturerSpecific::_SetManufacturerProductId(uint8 instance)
+			{
+				LOG_CALL
+				
+				Node* node = GetNodeUnsafe();
+				
+				int manufacturerId, productType, productId;
+				
+				ZWay zway = GetZWay();
+				LOG_ERR(zdata_get_integer(zway_find_device_instance_cc_data(zway, GetNodeId(), instance - 1, StaticGetCommandClassId(), "vendorId"), &manufacturerId));
+				LOG_ERR(zdata_get_integer(zway_find_device_instance_cc_data(zway, GetNodeId(), instance - 1, StaticGetCommandClassId(), "productType"), &productType));
+				LOG_ERR(zdata_get_integer(zway_find_device_instance_cc_data(zway, GetNodeId(), instance - 1, StaticGetCommandClassId(), "productId"), &productId));
+				
+				if (node)
+				{
+					// Attempt to create the config parameters
+					SetProductDetails(manufacturerId, productType, productId);
+					ClearStaticRequest(StaticRequest_Values);
+					node->m_manufacturerSpecificClassReceived = true;
+
+					if (node->getConfigPath().size() > 0)
+					{
+						LoadConfigXML();
+					}
+
+					Log::Write(LogLevel_Info, GetNodeId(), "Received manufacturer specific report from node %d: Manufacturer=%s, Product=%s", GetNodeId(), node->GetManufacturerName().c_str(), node->GetProductName().c_str());
+					Log::Write(LogLevel_Info, GetNodeId(), "Node Identity Codes: %.4x:%.4x:%.4x", manufacturerId, productType, productId);
+				}
+
+				// Notify the watchers of the name changes
+				Notification* notification = new Notification(Notification::Type_NodeNaming);
+				notification->SetHomeAndNodeIds(GetHomeId(), GetNodeId());
+				GetDriver()->QueueNotification(notification);
+			}
+			
+//-----------------------------------------------------------------------------
+// <ManufacturerSpecific::Watcher>
+// Handles Z-Way events
+//-----------------------------------------------------------------------------
+			void ManufacturerSpecific::Watcher(ZWDataChangeType type, ZDataHolder data, uint8 instance)
+			{
+				LOG_CALL
+				
+				ZWay zway = GetZWay();
+				Node* node = GetNodeUnsafe();
+				
+				if ((type & ~PhantomUpdate) == Updated)
+				{
+					if (strcmp(zdata_get_path(data), "productId") == 0)
+					{
+						_SetManufacturerProductId(instance); // zdata is locked here
+					}
+					
+					if (strcmp(zdata_get_path(data), "serialNumber") == 0)
+					{
+						ZWCSTR deviceID_c_str;
+						const ZWBYTE *deviceID_c_bin;
+						size_t deviceID_c_len;
+						string deviceID = "";
+						
+						ZWDataType type;
+						LOG_ERR(zdata_get_type(zway_find_device_instance_cc_data(zway, GetNodeId(), instance - 1, StaticGetCommandClassId(), "serialNumber"), &type));
+						switch (type)
+						{
+							case Binary:
+								LOG_ERR(zdata_get_binary(zway_find_device_instance_cc_data(zway, GetNodeId(), instance - 1, StaticGetCommandClassId(), "serialNumber"), &deviceID_c_bin, &deviceID_c_len));
+								for (size_t i = 0; i < deviceID_c_len; i++)
+								{
+									char temp_chr[3];
+									snprintf(temp_chr, sizeof(temp_chr), "%.2x", deviceID_c_bin[i]);
+									deviceID += temp_chr;
+								}
+								break;
+							case String:
+								LOG_ERR(zdata_get_string(zway_find_device_instance_cc_data(zway, GetNodeId(), instance - 1, StaticGetCommandClassId(), "serialNumber"), &deviceID_c_str));
+								deviceID = deviceID_c_str;
+								break;
+							default:
+								break;
+						}
+						
+						if (deviceID != "" && node)
+						{
+							if (!GetValue(instance, ValueID_Index_ManufacturerSpecific::SerialNumber)) {
+								node->CreateValueString(ValueID::ValueGenre_System, StaticGetCommandClassId(), instance, ValueID_Index_ManufacturerSpecific::SerialNumber, "Serial Number", "", true, false, "", 0);
+							}
+							Internal::VC::ValueString *serial_value = static_cast<Internal::VC::ValueString*>(GetValue(instance, ValueID_Index_ManufacturerSpecific::SerialNumber));
+							serial_value->OnValueRefreshed(deviceID);
+							serial_value->Release();
+							Log::Write(LogLevel_Info, GetNodeId(), "Got ManufacturerSpecific SerialNumber: %s", deviceID.c_str());
+						}
+					}
+				}
+			}
+			
 
 //-----------------------------------------------------------------------------
 // <ManufacturerSpecific::LoadConfigXML>
@@ -331,8 +305,16 @@ namespace OpenZWave
 						node->CreateValueInt(ValueID::ValueGenre_System, GetCommandClassId(), _instance, ValueID_Index_ManufacturerSpecific::LoadedConfig, "Loaded Config Revision", "", true, false, m_loadedConfigRevision, 0);
 						node->CreateValueInt(ValueID::ValueGenre_System, GetCommandClassId(), _instance, ValueID_Index_ManufacturerSpecific::LocalConfig, "Config File Revision", "", true, false, m_fileConfigRevision, 0);
 						node->CreateValueInt(ValueID::ValueGenre_System, GetCommandClassId(), _instance, ValueID_Index_ManufacturerSpecific::LatestConfig, "Latest Available Config File Revision", "", true, false, m_latestConfigRevision, 0);
+						
+						AddWatcher(_instance, "productId");
+						AddWatcher(_instance, "serialNumber");
+						
+						// set product ID on load
+						SetManufacturerProductId(_instance);
 					}
 				}
+				
+				
 			}
 
 //-----------------------------------------------------------------------------

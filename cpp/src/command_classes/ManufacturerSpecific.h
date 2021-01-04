@@ -101,6 +101,11 @@ namespace OpenZWave
 					uint32 m_fileConfigRevision;
 					uint32 m_loadedConfigRevision;
 					uint32 m_latestConfigRevision;
+					
+					virtual void Watcher(ZWDataChangeType type, ZDataHolder data, uint8 instance);
+					
+					void SetManufacturerProductId(uint8 instance);
+					void _SetManufacturerProductId(uint8 instance);
 			};
 		} // namespace CC
 	} // namespace Internal
