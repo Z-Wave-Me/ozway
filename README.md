@@ -10,11 +10,12 @@ To test it with Home Assistant do:
 
     git clone -b hass https://github.com/home-assistant/python-openzwave
 
+    PY_VER=$(python3 -c 'import sys; print(".".join(map(str,sys.version_info[0:2])))')
     PY_SP=$(python3 -c 'import sysconfig as c; print(c.get_paths()["purelib"])')/
     make -C ~/ozway/ BUILD=DEBUG && cd ~/python-openzwave && LOCAL_OPENZWAVE=~/ozway python3 setup.py --flavor=dev bdist_wheel && \
-      sudo cp build/lib.linux-armv7l-3.7/libopenzwave.cpython-37m-arm-linux-gnueabihf.so "${PY_SP}" && \
+      sudo cp build/lib.linux-armv7l-"${PY_VER}"/libopenzwave.cpython-*.so "${PY_SP}" && \
       sudo rm -R "${PY_SP}"python_openzwave/ozw_config && sudo cp -R ~/ozway/config "${PY_SP}"python_openzwave/ozw_config && \
-      sudo cp /srv/snapshot/lib/python3.7/site-packages/python_openzwave/ozw_config/__init__.py "${PY_SP}"python_openzwave/ozw_config && \
+      sudo cp /srv/snapshot/lib/python"${PY_VER}"/site-packages/python_openzwave/ozw_config/__init__.py "${PY_SP}"python_openzwave/ozw_config && \
       sudo chown user:user "${PY_SP}"python_openzwave/ozw_config -R
 
 (it is assumeed that hass is installed under user *user*)
