@@ -6,11 +6,17 @@ Currently tested only on Raspberry OS and Linux
 
 To test it with Home Assistant do:
 
-    git clone https://github.com/Z-Wave-Me/ozway.git && cd ozway && git checkout debug
+    git clone -b OZWay https://github.com/Z-Wave-Me/ozway.git
 
-    git clone https://github.com/home-assistant/python-openzwave && cd python-openzwave && git checkout hass
+    git clone -b hass https://github.com/home-assistant/python-openzwave
 
-    make -C ~/ozway/ BUILD=DEBUG && cd ~/python-openzwave && LOCAL_OPENZWAVE=~/ozway python3 setup.py --flavor=dev bdist_wheel && sudo cp build/lib.linux-armv7l-3.7/libopenzwave.cpython-37m-arm-linux-gnueabihf.so /srv/user/lib/python3.7/site-packages/ && sudo rm -R /srv/user/lib/python3.7/site-packages/python_openzwave/ozw_config && sudo cp -R ~/ozway/config /srv/user/lib/python3.7/site-packages/python_openzwave/ozw_config && sudo cp /srv/snapshot/lib/python3.7/site-packages/python_openzwave/ozw_config/__init__.py /srv/user/lib/python3.7/site-packages/python_openzwave/ozw_config && sudo chown user:user /srv/user/lib/python3.7/site-packages/python_openzwave/ozw_config -R
+    PY_VER=$(python3 -c 'import sys; print(".".join(map(str,sys.version_info[0:2])))')
+    PY_SP=$(python3 -c 'import sysconfig as c; print(c.get_paths()["purelib"])')/
+    make -C ~/ozway/ BUILD=DEBUG && cd ~/python-openzwave && LOCAL_OPENZWAVE=~/ozway python3 setup.py --flavor=dev bdist_wheel && \
+      sudo cp build/lib.linux-armv7l-"${PY_VER}"/libopenzwave.cpython-*.so "${PY_SP}" && \
+      sudo rm -R "${PY_SP}"python_openzwave/ozw_config && sudo cp -R ~/ozway/config "${PY_SP}"python_openzwave/ozw_config && \
+      sudo cp /srv/snapshot/lib/python"${PY_VER}"/site-packages/python_openzwave/ozw_config/__init__.py "${PY_SP}"python_openzwave/ozw_config && \
+      sudo chown user:user "${PY_SP}"python_openzwave/ozw_config -R
 
 (it is assumeed that hass is installed under user *user*)
 
